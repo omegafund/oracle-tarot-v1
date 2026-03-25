@@ -124,7 +124,7 @@
 
         const rawData = window.rawData_KO || "";
 
-        // [부활 1] 손가락 아이콘 주변 상시 금가루
+        // [1] 상시 금가루 (손가락 주변)
         function createGoldDust() {
             const hand = document.getElementById('pointer-hand');
             if (!hand || document.getElementById('home-view').style.display === 'none') return;
@@ -145,7 +145,7 @@
         }
         setInterval(createGoldDust, 40);
 
-        // [부활 2] 카드 휘리릭 시 터져나오는 마법 금가루
+        // [2] 카드 휘리릭 시 터지는 금가루
         function createMagicParticle() {
             for (let i = 0; i < 200; i++) {
                 setTimeout(() => {
@@ -188,9 +188,7 @@
         function reveal() {
             const seed = document.getElementById('seed-input').value.trim();
             if (!seed) { alert("상담 내용을 입력해주세요."); return; }
-            
-            createMagicParticle(); // 휘리릭 금가루 가동!
-            
+            createMagicParticle();
             const tCard = document.createElement('div'); tCard.className = 'transition-card animate-whirl';
             document.body.appendChild(tCard);
             const homeView = document.getElementById('home-view');
@@ -208,10 +206,14 @@
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
                 
                 function renderCard(index) {
+                    // [핵심] 6번 카드 점사 후 버튼 소환
                     if (index >= 6) {
                         const btn = document.getElementById('home-btn');
-                        btn.style.display = "flex";
-                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 500);
+                        btn.style.display = "flex"; // 확실한 노출
+                        setTimeout(() => { 
+                            btn.style.opacity = "1"; 
+                            btn.scrollIntoView({ behavior: 'smooth' }); 
+                        }, 500);
                         return;
                     }
 
@@ -219,6 +221,7 @@
                     const isRev = Math.random() > 0.5;
                     const direction = isRev ? "역" : "정";
 
+                    // [데이터 보강] 카테고리 상관없이 카드번호 매칭
                     let match = lines.find(l => {
                         const d = l.split(';');
                         return d[0].trim() === currentKey && d[1].trim() === direction;
