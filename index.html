@@ -233,18 +233,27 @@
             type();
         }
 
-        function mapKeyToFileName(cardKey) {
-            try {
-                const key = cardKey.trim().toUpperCase();
-                let num = key.startsWith('M') ? key.replace(/[^0-9]/g, "").padStart(2, '0') : 
-                          (() => {
-                              let s = key.substring(0, 1), v = parseInt(key.substring(1));
-                              let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
-                              return (b + v - 1).toString().padStart(2, '0');
-                          })();
-                return "images/cards/m" + num + ".jpg";
-            } catch (e) { return "m01.jpg"; }
+        // [교정된 함수] 대소문자 및 경로 문제를 해결합니다.
+function mapKeyToFileName(cardKey) {
+    try {
+        const key = cardKey.trim().toUpperCase(); // M00 형태
+        let num = "";
+        
+        if (key.startsWith('M')) {
+            // M01 -> 01 추출
+            num = key.replace(/[^0-9]/g, "").padStart(2, '0');
+        } else {
+            // 마이너 카드 계산 로직
+            let s = key.substring(0, 1), v = parseInt(key.substring(1));
+            let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
+            num = (b + v - 1).toString().padStart(2, '0');
         }
+
+         return "images/cards/m" + num + ".jpg"; 
+    } catch (e) { 
+        return "images/cards/m00.jpg"; 
+    }
+}
 
         // 4. [메인 로직]
         function reveal() {
