@@ -173,14 +173,23 @@
             type();
         }
 
-        function mapKeyToFileName(cardKey) {
-            try {
-                const key = cardKey.trim().toUpperCase();
-                let num = key.startsWith('M') ? key.replace(/[^0-9]/g, "").padStart(2, '0') : 
-                        (() => { let s = key.substring(0, 1), v = parseInt(key.substring(1)); let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64; return (b + v - 1).toString().padStart(2, '0'); })();
-                return "images/cards/m" + num + ".jpg"; 
-            } catch (e) { return "images/cards/m00.jpg"; }
+        // [교정] 마스터님의 현재 깃허브 파일 위치에 100% 맞춘 경로 로직입니다.
+function mapKeyToFileName(cardKey) {
+    try {
+        const key = cardKey.trim().toUpperCase();
+        let num = "";
+        if (key.startsWith('M')) {
+            num = key.replace(/[^0-9]/g, "").padStart(2, '0');
+        } else {
+            let s = key.substring(0, 1), v = parseInt(key.substring(1));
+            let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
+            num = (b + v - 1).toString().padStart(2, '0');
         }
+        // 마스터님, 폴더 경로 "images/cards/"를 제거했습니다. 
+        // 이제 깃허브 메인에 있는 m01.jpg를 직접 찾습니다.
+        return "m" + num + ".jpg"; 
+    } catch (e) { return "m00.jpg"; }
+}
 
         function reveal() {
             const seed = document.getElementById('seed-input').value.trim();
