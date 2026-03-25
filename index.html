@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ORACLE TAROT PRO - MASTERPIECE</title>
+
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="shortcut icon" href="icon.png">
+    
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="images/icon/icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
@@ -65,14 +69,15 @@
     .rev-badge { background: rgba(255, 68, 68, 0.15); color: #ff4444; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px; border: 1px solid rgba(255, 68, 68, 0.3); vertical-align: middle; }
     .btn-home { background: rgba(212,175,55,0.2); border: 2px solid var(--gold); color: var(--gold); padding: 12px 50px; border-radius: 50px; cursor: pointer; margin: 40px 0; display: none; flex-direction: column; align-items: center; gap: 4px; font-weight: 800; opacity: 0; transition: 0.5s; }
     
-    /* 강화된 카드 휘리릭 애니메이션 */
     .transition-card { position: fixed; top: 50%; left: 50%; width: 120px; height: 190px; background: linear-gradient(135deg, var(--dark-gold), #fff, var(--gold)); border: 3px solid #fff; border-radius: 12px; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; box-shadow: 0 0 50px var(--gold); }
+    
+    /* [미션 2: 휘리릭 애니메이션 강화] 시간을 2.5s로 연장하고 회전을 더 웅장하게 수정함 */
     @keyframes whirlAndAway { 
         0% { transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) scale(0.2); opacity: 0; } 
-        30% { opacity: 1; transform: translate(-50%, -50%) rotateX(360deg) rotateY(720deg) scale(1.5); } 
-        100% { transform: translate(-50%, -180%) rotateX(720deg) rotateY(1440deg) scale(0); opacity: 0; } 
+        30% { opacity: 1; transform: translate(-50%, -50%) rotateX(720deg) rotateY(1080deg) scale(1.6); } 
+        100% { transform: translate(-50%, -250%) rotateX(1440deg) rotateY(2160deg) scale(0); opacity: 0; } 
     }
-    .animate-whirl { animation: whirlAndAway 1.8s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+    .animate-whirl { animation: whirlAndAway 2.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
     .particle { position: fixed; border-radius: 50%; pointer-events: none; z-index: 9999; }
     </style>
 </head>
@@ -112,7 +117,6 @@
 
     <script src="./data_ko.js/data_ko.js"></script>
     <script>
-        // [보안]
         (function() {
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('selectstart', e => e.preventDefault());
@@ -121,11 +125,9 @@
 
         const rawData = window.rawData_KO || "";
 
-        // 3. [강화된 이펙트 시스템]
         function createGoldDust() {
             const hand = document.getElementById('pointer-hand');
             if (!hand || document.getElementById('home-view').style.display === 'none') return;
-            // 생성량 100% 증가를 위해 반복문 추가
             for(let i=0; i<2; i++) {
                 const dust = document.createElement('div');
                 const rect = hand.getBoundingClientRect();
@@ -141,7 +143,7 @@
                 dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*60}px, ${Math.sin(angle)*60}px) scale(0)` }], { duration: 1200 + Math.random()*800 }).onfinish = () => dust.remove();
             }
         }
-        setInterval(createGoldDust, 40); // 간격 단축으로 밀도 극대화
+        setInterval(createGoldDust, 40);
 
         function createMagicParticle() {
             for (let i = 0; i < 200; i++) {
@@ -173,23 +175,20 @@
             type();
         }
 
-        // [교정] 마스터님의 현재 깃허브 파일 위치에 100% 맞춘 경로 로직입니다.
-function mapKeyToFileName(cardKey) {
-    try {
-        const key = cardKey.trim().toUpperCase();
-        let num = "";
-        if (key.startsWith('M')) {
-            num = key.replace(/[^0-9]/g, "").padStart(2, '0');
-        } else {
-            let s = key.substring(0, 1), v = parseInt(key.substring(1));
-            let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
-            num = (b + v - 1).toString().padStart(2, '0');
+        function mapKeyToFileName(cardKey) {
+            try {
+                const key = cardKey.trim().toUpperCase();
+                let num = "";
+                if (key.startsWith('M')) {
+                    num = key.replace(/[^0-9]/g, "").padStart(2, '0');
+                } else {
+                    let s = key.substring(0, 1), v = parseInt(key.substring(1));
+                    let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
+                    num = (b + v - 1).toString().padStart(2, '0');
+                }
+                return "m" + num + ".jpg"; 
+            } catch (e) { return "m00.jpg"; }
         }
-        // 마스터님, 폴더 경로 "images/cards/"를 제거했습니다. 
-        // 이제 깃허브 메인에 있는 m01.jpg를 직접 찾습니다.
-        return "m" + num + ".jpg"; 
-    } catch (e) { return "m00.jpg"; }
-}
 
         function reveal() {
             const seed = document.getElementById('seed-input').value.trim();
@@ -200,6 +199,7 @@ function mapKeyToFileName(cardKey) {
             const homeView = document.getElementById('home-view');
             homeView.style.transition = "1s"; homeView.style.opacity = "0";
 
+            // [미션 2: 애니메이션 시간에 맞춘 지연 시간 설정] 1800ms -> 2500ms로 연장
             setTimeout(() => {
                 tCard.remove(); homeView.style.display = 'none';
                 document.getElementById('result-view').style.display = 'flex';
@@ -207,19 +207,32 @@ function mapKeyToFileName(cardKey) {
                 document.getElementById('rev-guide').style.display = 'block';
 
                 const lines = rawData.trim().split('\n').filter(l => l.includes(';'));
-                const uniqueKeys = [...new Set(lines.map(l => l.split(';')[0].trim()))];
-                const selectedKeys = uniqueKeys.sort(() => 0.5 - Math.random()).slice(0, 6);
+                const keys = [...new Set(lines.map(l => l.split(';')[0].trim()))];
+                const selectedKeys = keys.sort(() => 0.5 - Math.random()).slice(0, 6);
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
                 
                 function renderCard(index) {
-                    if (index >= 6) {
+                    if (index >= selectedKeys.length || index >= 6) {
                         const btn = document.getElementById('home-btn'); btn.style.display = "flex";
                         setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 800);
                         return;
                     }
-                    const currentKey = selectedKeys[index], isRev = Math.random() > 0.5, direction = isRev ? "역" : "정";
-                    let match = lines.find(l => { const d = l.split(';'); return d[0].trim() === currentKey && d[1].trim() === direction; }) || lines.find(l => l.split(';')[0].trim() === currentKey);
-                    const data = match.split(';'), cardId = data[0].trim(), hashtag = data[3].trim(), fullOracle = `${data[4]||""} ${data[5]||""} ${data[6]||""}`.trim();
+
+                    const currentKey = selectedKeys[index];
+                    const isRev = Math.random() > 0.5;
+                    const direction = isRev ? "역" : "정";
+
+                    let match = lines.find(l => {
+                        const d = l.split(';');
+                        return d[0].trim() === currentKey && d[1].trim() === direction;
+                    }) || lines.find(l => l.split(';')[0].trim() === currentKey);
+
+                    if(!match) { renderCard(index + 1); return; }
+
+                    const data = match.split(';');
+                    const cardId = data[0].trim();
+                    const hashtag = (data[3] || "#운명").trim();
+                    const fullOracle = `${data[4]||""} ${data[5]||""} ${data[6]||""}`.trim();
 
                     let stepTitle = "", stepColor = "var(--gold)", isFinal = (index === 5);
                     if (index < 2) stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">📜 [과거]</span><br>형성된 흐름 #${index + 1}`;
@@ -241,13 +254,16 @@ function mapKeyToFileName(cardKey) {
                                 </div>
                             </div><div id="text-${index}" style="color:#eee; font-size:1.05rem; line-height:1.9; word-break:keep-all; min-height:80px;"></div></div>`;
                     cardList.appendChild(cardDiv);
+                    
                     setTimeout(() => { 
                         cardDiv.classList.add('card-show'); cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                        setTimeout(() => { typeWriter(document.getElementById("text-" + index), fullOracle, isFinal ? 50 : 35, () => { setTimeout(() => renderCard(index + 1), 1300); }); }, 800);
+                        setTimeout(() => { typeWriter(document.getElementById("text-" + index), fullOracle, isFinal ? 50 : 35, () => { 
+                            setTimeout(() => renderCard(index + 1), 1300); 
+                        }); }, 800);
                     }, 150);
                 }
                 renderCard(0);
-            }, 1800);
+            }, 2500); // [미션 2] 애니메이션 전환 시간 수정됨
         }
     </script>
 </body>
