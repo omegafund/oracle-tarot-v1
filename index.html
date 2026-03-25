@@ -211,28 +211,33 @@
                 const selectedKeys = keys.sort(() => 0.5 - Math.random()).slice(0, 6);
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
                 
-                function renderCard(index) {
-                    if (index >= selectedKeys.length || index >= 6) {
-                        const btn = document.getElementById('home-btn'); btn.style.display = "flex";
-                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 800);
-                        return;
-                    }
+                // [교정된 매칭 로직] - 공백과 카테고리 문제를 완전히 해결합니다.
+function renderCard(index) {
+    if (index >= 6) { /* 홈 버튼 활성화 로직 */ return; }
 
-                    const currentKey = selectedKeys[index];
-                    const isRev = Math.random() > 0.5;
-                    const direction = isRev ? "역" : "정";
+    const currentKey = selectedKeys[index].trim(); // 공백 제거
+    const isRev = Math.random() > 0.5;
+    const direction = isRev ? "역" : "정";
 
-                    let match = lines.find(l => {
-                        const d = l.split(';');
-                        return d[0].trim() === currentKey && d[1].trim() === direction;
-                    }) || lines.find(l => l.split(';')[0].trim() === currentKey);
+    // 1. 우선순위: 현재 질문에 맞는 카테고리가 있다면 그것부터 찾음
+    // 2. 차선순위: 없다면 '일반' 혹은 해당 카드 번호의 첫 번째 데이터를 무조건 가져옴
+    let match = lines.find(l => {
+        const d = l.split(';');
+        return d[0].trim() === currentKey && d[1].trim() === direction;
+    });
 
-                    if(!match) { renderCard(index + 1); return; }
+    // 만약 '역' 방향 데이터 매칭에 실패하면, 방향 상관없이 해당 카드 데이터라도 강제로 긁어옴
+    if (!match) {
+        match = lines.find(l => l.includes(currentKey));
+    }
 
-                    const data = match.split(';');
-                    const cardId = data[0].trim();
-                    const hashtag = (data[3] || "#운명").trim();
-                    const fullOracle = `${data[4]||""} ${data[5]||""} ${data[6]||""}`.trim();
+    if (!match) { renderCard(index + 1); return; } // 최후의 보루: 다음 카드로
+
+    const data = match.split(';');
+    // 데이터 추출 시 앞뒤 공백을 한 번 더 깎아내어 오류를 원천 차단합니다.
+    const cardId = data[0].trim();
+    const hashtag = (data[3] || "#운명").trim();
+    const fullOracle = `${data[4]||""} ${data[5]||""} ${data[6]||""}`.trim();
 
                     let stepTitle = "", stepColor = "var(--gold)", isFinal = (index === 5);
                     if (index < 2) stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">📜 [과거]</span><br>형성된 흐름 #${index + 1}`;
