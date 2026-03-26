@@ -170,77 +170,119 @@
         </div>
     </div>
 
- <script src="./data_ko.js/data_ko.js"></script>
+ <script src="./data_ko.js"></script>
 
 <script>
-        // 1. [보안 및 F12 대응]
-        (function() {
-            document.addEventListener('contextmenu', e => e.preventDefault());
-            document.addEventListener('selectstart', e => e.preventDefault());
-            document.addEventListener('keydown', function(e) {
-                if (e.keyCode === 123) return true; 
-                if ((e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) {
-                    e.preventDefault(); return false;
-                }
-            });
-        })();
-
-        // [교정] 2. 데이터 영역: 외부 파일에서 데이터를 안전하게 가져옵니다.
-        const rawData = window.rawData_KO || "";
-
-        // 3. [유틸리티 함수]
-        function createGoldDust() {
-            const hand = document.getElementById('pointer-hand');
-            if (!hand || document.getElementById('home-view').style.display === 'none') return;
-            const dust = document.createElement('div');
-            const rect = hand.getBoundingClientRect();
-            const size = Math.random() * 3 + 1;
-            dust.style.width = size + 'px'; dust.style.height = size + 'px';
-            dust.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 30) + 'px';
-            dust.style.top = (rect.top + (Math.random() - 0.5) * 30) + 'px';
-            dust.style.position = 'fixed'; dust.style.background = 'var(--bright-gold)';
-            dust.style.borderRadius = '50%'; dust.style.pointerEvents = 'none'; dust.style.zIndex = '9';
-            dust.style.boxShadow = '0 0 5px var(--gold)';
-            document.body.appendChild(dust);
-            const angle = Math.random() * Math.PI * 2;
-            dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*40}px, ${Math.sin(angle)*40}px) scale(0)` }], { duration: 1800 }).onfinish = () => dust.remove();
+// ============================
+// 1. 보안 (원본 유지)
+// ============================
+(function() {
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode === 123) return true;
+        if ((e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) {
+            e.preventDefault(); return false;
         }
-        setInterval(createGoldDust, 80);
+    });
+})();
 
-        function createParticle() {
-            const p = document.createElement('div'); p.className = 'particle';
-            const x = window.innerWidth / 2, y = window.innerHeight / 2;
-            p.style.left = x + 'px'; p.style.top = y + 'px';
-            document.body.appendChild(p);
-            const angle = Math.random() * Math.PI * 2, velocity = 400 + Math.random() * 600;
-            const destX = Math.cos(angle) * velocity, destY = Math.sin(angle) * velocity;
-            p.animate([{ transform: 'translate(-50%, -50%) scale(1.8)', opacity: 1 }, { transform: `translate(${destX}px, ${destY}px) scale(0)`, opacity: 0 }], { duration: 1500, easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)', fill: 'forwards' });
-            setTimeout(() => p.remove(), 2000);
-        }
+// ============================
+// 2. 데이터 로드 안정화 (GitHub 대응)
+// ============================
+const rawData = window.rawData_KO || "";
 
-        function typeWriter(element, text, speed, callback) {
-            let i = 0; element.innerHTML = "";
-            function type() {
-                if (i < text.length) {
-                    element.innerHTML += text.charAt(i++);
-                    const rect = element.closest('.card-item').getBoundingClientRect();
-                    if (rect.bottom > window.innerHeight - 100) {
-                        window.scrollBy({ top: 25, behavior: 'smooth' });
-                    }
-                    setTimeout(type, speed);
-                } else if (callback) callback();
+if (!rawData || rawData.length < 100) {
+    alert("데이터 로드 실패: data_ko.js 확인 필요");
+}
+
+// ============================
+// 3. 씨드 엔진 (핵심)
+// ============================
+function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+}
+
+function createSeededRandom(seed) {
+    return function () {
+        const x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+    };
+}
+
+// ============================
+// 4. 파티클 (원본 유지)
+// ============================
+function createGoldDust() {
+    const hand = document.getElementById('pointer-hand');
+    if (!hand || document.getElementById('home-view').style.display === 'none') return;
+    const dust = document.createElement('div');
+    const rect = hand.getBoundingClientRect();
+    const size = Math.random() * 3 + 1;
+    dust.style.width = size + 'px'; dust.style.height = size + 'px';
+    dust.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 30) + 'px';
+    dust.style.top = (rect.top + (Math.random() - 0.5) * 30) + 'px';
+    dust.style.position = 'fixed';
+    dust.style.background = 'var(--bright-gold)';
+    dust.style.borderRadius = '50%';
+    dust.style.pointerEvents = 'none';
+    dust.style.zIndex = '9';
+    dust.style.boxShadow = '0 0 5px var(--gold)';
+    document.body.appendChild(dust);
+    const angle = Math.random() * Math.PI * 2;
+    dust.animate([
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: `translate(${Math.cos(angle)*40}px, ${Math.sin(angle)*40}px) scale(0)` }
+    ], { duration: 1800 }).onfinish = () => dust.remove();
+}
+setInterval(createGoldDust, 80);
+
+function createParticle() {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const x = window.innerWidth / 2, y = window.innerHeight / 2;
+    p.style.left = x + 'px'; p.style.top = y + 'px';
+    document.body.appendChild(p);
+    const angle = Math.random() * Math.PI * 2, velocity = 400 + Math.random() * 600;
+    const destX = Math.cos(angle) * velocity, destY = Math.sin(angle) * velocity;
+    p.animate([
+        { transform: 'translate(-50%, -50%) scale(1.8)', opacity: 1 },
+        { transform: `translate(${destX}px, ${destY}px) scale(0)`, opacity: 0 }
+    ], { duration: 1500, easing: 'cubic-bezier(0.1,0.8,0.3,1)', fill: 'forwards' });
+    setTimeout(() => p.remove(), 2000);
+}
+
+// ============================
+// 5. 타이핑 (원본 유지)
+// ============================
+function typeWriter(element, text, speed, callback) {
+    let i = 0; element.innerHTML = "";
+    function type() {
+        if (i < text.length) {
+            element.innerHTML += text.charAt(i++);
+            const rect = element.closest('.card-item').getBoundingClientRect();
+            if (rect.bottom > window.innerHeight - 100) {
+                window.scrollBy({ top: 25, behavior: 'smooth' });
             }
-            type();
-        }
+            setTimeout(type, speed);
+        } else if (callback) callback();
+    }
+    type();
+}
 
-       /* [최종 수술] mapKeyToFileName 함수 전체를 이 내용으로 교체하십시오 */
+// ============================
+// 6. 이미지 매핑 (GitHub 완전 대응)
+// ============================
 function mapKeyToFileName(cardKey) {
     try {
-        // 1. 입력된 카드 키를 대문자로 통일합니다 (예: M01, C05)
-        const key = cardKey.trim().toUpperCase(); 
+        const key = cardKey.trim().toUpperCase();
         let num = "";
-        
-        // 2. 메이저 카드와 마이너 카드의 숫자 매핑 로직 (기존 유지)
+
         if (key.startsWith('M')) {
             num = key.replace(/[^0-9]/g, "").padStart(2, '0');
         } else {
@@ -249,103 +291,161 @@ function mapKeyToFileName(cardKey) {
             num = (b + v - 1).toString().padStart(2, '0');
         }
 
-        // [핵심 교정 지점] 
-        // 마스터님의 깃허브 트리 구조(최상위 폴더)에 맞춰 폴더 경로("./", "images/cards/")를 싹 지웁니다.
-        // 그리고 실제 파일명(m01.jpg)과 일치하도록 소문자 'm'과 소문자 '.jpg'를 붙여 파일명만 반환합니다.
-        // 이 한 줄이 깃허브에서 이미지를 나오게 하는 열쇠입니다.
-        return "m" + num + ".jpg"; 
-
-    } catch (e) { 
-        // 3. 에러 발생 시 비상용 카드를 반환합니다.
-        return "m00.jpg"; 
+        return "m" + num + ".jpg";
+    } catch (e) {
+        return "m00.jpg";
     }
 }
-        // 4. [메인 로직]
-        function reveal() {
-            const seedInput = document.getElementById('seed-input');
-            const seed = seedInput ? seedInput.value.trim() : "";
-            if (!seed) { alert("상담 내용을 입력해주세요."); return; }
 
-            for (let i = 0; i < 150; i++) setTimeout(createParticle, i * 3);
-            const tCard = document.createElement('div'); tCard.className = 'transition-card animate-whirl';
-            document.body.appendChild(tCard);
+// ============================
+// 7. 메인 (완전 씨드 엔진 적용)
+// ============================
+function reveal() {
 
-            const homeView = document.getElementById('home-view');
-            homeView.style.transition = "0.8s"; homeView.style.opacity = "0";
+    const seedInput = document.getElementById('seed-input');
+    const seed = seedInput ? seedInput.value.trim() : "";
+
+    if (!seed) {
+        alert("상담 내용을 입력해주세요.");
+        return;
+    }
+
+    // 🔥 고급 3중 시드 (질문 + 기기 + 날짜)
+    const seedBase =
+        seed.toLowerCase().replace(/\s/g,"") +
+        navigator.userAgent +
+        new Date().toDateString();
+
+    const seededRand = createSeededRandom(hashString(seedBase));
+
+    for (let i = 0; i < 150; i++) setTimeout(createParticle, i * 3);
+
+    const tCard = document.createElement('div');
+    tCard.className = 'transition-card animate-whirl';
+    document.body.appendChild(tCard);
+
+    const homeView = document.getElementById('home-view');
+    homeView.style.transition = "0.8s";
+    homeView.style.opacity = "0";
+
+    setTimeout(() => {
+
+        tCard.remove();
+        homeView.style.display = 'none';
+
+        document.getElementById('result-view').style.display = 'flex';
+        document.getElementById('category-display').innerText = "✨ 영성적 서사 : 6인의 신탁 가이드 ✨";
+        document.getElementById('rev-guide').style.display = 'block';
+
+        // ============================
+        // 데이터 정리 (완전 안정화)
+        // ============================
+        const allLines = rawData
+            .replace(/\r/g,'')
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l && l.includes(';'));
+
+        const keys = [...new Set(
+            allLines
+                .map(l => l.split(';')[0])
+                .filter(k => k && k.length > 0)
+        )];
+
+        // 씨드 셔플
+        for (let i = keys.length - 1; i > 0; i--) {
+            const j = Math.floor(seededRand() * (i + 1));
+            [keys[i], keys[j]] = [keys[j], keys[i]];
+        }
+
+        const selectedKeys = keys.slice(0, 6);
+
+        const cardList = document.getElementById('card-list');
+        cardList.innerHTML = '';
+
+        function renderCard(index) {
+
+            if (index >= 6) {
+                const btn = document.getElementById('home-btn');
+                btn.style.display = "flex";
+                setTimeout(() => {
+                    btn.style.opacity = "1";
+                    btn.scrollIntoView({ behavior: 'smooth' });
+                }, 500);
+                return;
+            }
+
+            const currentKey = selectedKeys[index];
+            const isRev = seededRand() > 0.5;
+            const direction = isRev ? "역" : "정";
+
+            let match =
+                allLines.find(l => {
+                    const d = l.split(';');
+                    return d[0].trim() === currentKey && d[1].trim() === direction;
+                }) ||
+                allLines.find(l => l.split(';')[0].trim() === currentKey);
+
+            if (!match) {
+                renderCard(index + 1);
+                return;
+            }
+
+            const data = match.split(';');
+
+            const cardId = data[0].trim();
+            const hashtag = data[3];
+            const fullOracle = `${data[4]} ${data[5]} ${data[6]}`;
+
+            let stepTitle = "";
+            let stepColor = "var(--gold)";
+            let isFinal = (index === 5);
+
+            if (index < 2) stepTitle = `<span style="font-size:0.8rem;">📜 [과거]</span><br>형성된 흐름 #${index + 1}`;
+            else if (index < 4) { stepTitle = `<span style="font-size:0.8rem;">✨ [현재]</span><br>직면한 에너지 #${index + 1}`; stepColor = "#00ffcc"; }
+            else if (index === 4) { stepTitle = `<span style="font-size:0.8rem;">🔮 [미래]</span><br>도달할 방향`; stepColor = "var(--bright-gold)"; }
+            else { stepTitle = `<span>👑 최종 신탁</span>`; stepColor = "#FFD700"; }
+
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card-item';
+
+            const finalStyle = isFinal ?
+                `border:3px solid #FFD700; box-shadow: 0 0 35px rgba(255,215,0,0.4); transform: scale(1.05);`
+                :
+                `border:1px solid ${stepColor};`;
+
+            cardDiv.innerHTML = `
+            <div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
+                <div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:15px;">
+                    <div style="flex:0 0 70px; height:110px; border-radius:8px; overflow:hidden; border:1px solid ${stepColor};">
+                        <img src="${mapKeyToFileName(cardId)}" class="${isRev ? 'tarot-card upside-down' : ''}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="flex:1;">
+                        <div style="color:${stepColor}; font-weight:900;">${stepTitle}</div>
+                        <div style="color:var(--bright-gold); font-size:0.85rem; margin-top:10px;">${hashtag}</div>
+                    </div>
+                </div>
+                <div id="text-${index}" style="color:#eee;"></div>
+            </div>`;
+
+            cardList.appendChild(cardDiv);
 
             setTimeout(() => {
-                tCard.remove(); homeView.style.display = 'none';
-                document.getElementById('result-view').style.display = 'flex';
-                document.getElementById('category-display').innerText = "✨ 영성적 서사 : 6인의 신탁 가이드 ✨";
-                document.getElementById('rev-guide').style.display = 'block';
+                cardDiv.classList.add('card-show');
 
-                const allLines = rawData.trim().split('\n').filter(line => line.includes(';'));
-                const shuffled = allLines.sort(() => 0.5 - Math.random()).slice(0, 6);
-                const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
-                
-                function renderCard(index) {
-                    if (index >= shuffled.length) {
-                        const btn = document.getElementById('home-btn'); btn.style.display = "flex";
-                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 500);
-                        return;
-                    }
+                const target = document.getElementById("text-" + index);
 
-                    const data = shuffled[index].split(';');
-                    const cardId = data[0].trim();
-                    const isRev = Math.random() > 0.5;
-                    const hashtag = data[3];
-                    const fullOracle = `${data[4]} ${data[5]} ${data[6]}`;
+                typeWriter(target, fullOracle, 30, () => {
+                    setTimeout(() => renderCard(index + 1), 300);
+                });
 
-                    let stepTitle = "";
-                    let stepColor = "var(--gold)";
-                    let isFinal = (index === 5);
-
-                    if (index < 2) stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">📜 [과거]</span><br>형성된 흐름 #${index + 1}`;
-                    else if (index < 4) { stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">✨ [현재]</span><br>직면한 에너지 #${index + 1}`; stepColor = "#00ffcc"; }
-                    else if (index === 4) { stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">🔮 [미래]</span><br>도달할 방향`; stepColor = "var(--bright-gold)"; }
-                    else { 
-                        stepTitle = `<span style="font-size:0.85rem; opacity:0.9;">👑 [최종 신탁]</span><br><span style="font-size:1.2rem; display:block; margin-top:4px; letter-spacing:0.05em;">운명의 해답</span>`; 
-                        stepColor = "#FFD700"; 
-                    }
-
-                    const cardDiv = document.createElement('div');
-                    cardDiv.className = 'card-item';
-                    const finalStyle = isFinal ? `border:3px solid #FFD700; box-shadow: 0 0 35px rgba(255,215,0,0.4); transform: scale(1.05);` : `border:1px solid ${stepColor};`;
-                    
-                    cardDiv.innerHTML = `
-                        <div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
-                            <div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:15px;">
-                                <div style="flex:0 0 70px; height:110px; border-radius:8px; overflow:hidden; border: 1px solid ${isFinal ? '#FFD700' : stepColor};">
-                                    <img src="${mapKeyToFileName(cardId)}" class="${isRev ? 'tarot-card upside-down' : ''}" style="width:100%; height:100%; object-fit:cover;">
-                                </div>
-                                <div style="flex:1;">
-                                    <div style="line-height:1.3;">
-                                        <div style="color:${isFinal ? '#FFD700' : stepColor}; font-weight:900;">${stepTitle}</div>
-                                        ${isRev ? `<div style="margin-top:8px;"><span class="rev-badge" style="background:rgba(255,0,0,0.2); color:#ff4d4d; border:1px solid #ff4d4d; font-size:0.75rem; padding:2px 6px; border-radius:4px; font-weight:900;">REV 🔄</span></div>` : ""}
-                                    </div>
-                                    <div style="color:var(--bright-gold); font-size:0.85rem; font-weight:700; margin-top:10px;">${hashtag}</div>
-                                </div>
-                            </div>
-                            <div id="text-${index}" style="color:#eee; font-size:1rem; line-height:1.8; word-break:keep-all; min-height:80px;"></div>
-                        </div>`;
-                    
-                    cardList.appendChild(cardDiv);
-                    
-                    setTimeout(() => {
-                        cardDiv.classList.add('card-show');
-                        cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                        
-                        setTimeout(() => {
-                            const target = document.getElementById("text-" + index);
-                            typeWriter(target, fullOracle, isFinal ? 45 : 30, () => {
-                                setTimeout(() => renderCard(index + 1), 300);
-                            });
-                        }, 800);
-                    }, 100);
-                }
-                renderCard(0);
-            }, 1500);
+            }, 100);
         }
-    </script>
+
+        renderCard(0);
+
+    }, 1500);
+}
+</script>
 </body>
 </html>
