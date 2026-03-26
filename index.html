@@ -6,8 +6,8 @@
     <title>ORACLE TAROT PRO - MASTERPIECE</title>
 
     <link rel="icon" href="icon.png?v=2" type="image/png">
-<link rel="apple-touch-icon" href="icon.png?v=2">
-<link rel="shortcut icon" href="icon.png?v=2">
+    <link rel="apple-touch-icon" href="icon.png?v=2">
+    <link rel="shortcut icon" href="icon.png?v=2">
     
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -71,7 +71,6 @@
     
     .transition-card { position: fixed; top: 50%; left: 50%; width: 120px; height: 190px; background: linear-gradient(135deg, var(--dark-gold), #fff, var(--gold)); border: 3px solid #fff; border-radius: 12px; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; box-shadow: 0 0 50px var(--gold); }
     
-    /* [미션 2: 휘리릭 애니메이션 강화] 시간을 2.5s로 연장하고 회전을 더 웅장하게 수정함 */
     @keyframes whirlAndAway { 
         0% { transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) scale(0.2); opacity: 0; } 
         30% { opacity: 1; transform: translate(-50%, -50%) rotateX(720deg) rotateY(1080deg) scale(1.6); } 
@@ -115,16 +114,33 @@
         </div>
     </div>
 
-   <script src="data_ko.js"></script>
+    <script src="data_ko.js"></script>
     <script>
         (function() {
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('selectstart', e => e.preventDefault());
+            document.addEventListener('keydown', e => { if (e.keyCode !== 123 && (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) e.preventDefault(); });
         })();
 
         const rawData = window.rawData_KO || "";
 
-        // [1] 상시 금가루 (손가락 주변)
+        /* 시드 랜덤 엔진 */
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+        function createSeededRandom(seed) {
+            return function() {
+                const x = Math.sin(seed++) * 10000;
+                return x - Math.floor(x);
+            }
+        }
+
+        /* 금가루 효과 */
         function createGoldDust() {
             const hand = document.getElementById('pointer-hand');
             if (!hand || document.getElementById('home-view').style.display === 'none') return;
@@ -145,7 +161,6 @@
         }
         setInterval(createGoldDust, 40);
 
-        // [2] 카드 휘리릭 시 터지는 금가루
         function createMagicParticle() {
             for (let i = 0; i < 200; i++) {
                 setTimeout(() => {
@@ -186,8 +201,12 @@
         }
 
         function reveal() {
-            const seed = document.getElementById('seed-input').value.trim();
-            if (!seed) { alert("상담 내용을 입력해주세요."); return; }
+            const seedInput = document.getElementById('seed-input').value.trim();
+            if (!seedInput) { alert("상담 내용을 입력해주세요."); return; }
+
+            const seedValue = hashString(seedInput.toLowerCase().replace(/\s/g,""));
+            const seededRand = createSeededRandom(seedValue);
+
             createMagicParticle();
             const tCard = document.createElement('div'); tCard.className = 'transition-card animate-whirl';
             document.body.appendChild(tCard);
@@ -202,26 +221,26 @@
 
                 const lines = rawData.trim().split('\n').filter(l => l.includes(';'));
                 const keys = [...new Set(lines.map(l => l.split(';')[0].trim()))];
-                const selectedKeys = keys.sort(() => 0.5 - Math.random()).slice(0, 6);
+                
+                for (let i = keys.length - 1; i > 0; i--) {
+                    const j = Math.floor(seededRand() * (i + 1));
+                    [keys[i], keys[j]] = [keys[j], keys[i]];
+                }
+
+                const selectedKeys = keys.slice(0, 6);
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
                 
                 function renderCard(index) {
-                    // [핵심] 6번 카드 점사 후 버튼 소환
-                    if (index >= 6) {
-                        const btn = document.getElementById('home-btn');
-                        btn.style.display = "flex"; // 확실한 노출
-                        setTimeout(() => { 
-                            btn.style.opacity = "1"; 
-                            btn.scrollIntoView({ behavior: 'smooth' }); 
-                        }, 500);
+                    if (index >= selectedKeys.length || index >= 6) {
+                        const btn = document.getElementById('home-btn'); btn.style.display = "flex";
+                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 800);
                         return;
                     }
 
                     const currentKey = selectedKeys[index].trim();
-                    const isRev = Math.random() > 0.5;
+                    const isRev = seededRand() > 0.5;
                     const direction = isRev ? "역" : "정";
 
-                    // [데이터 보강] 카테고리 상관없이 카드번호 매칭
                     let match = lines.find(l => {
                         const d = l.split(';');
                         return d[0].trim() === currentKey && d[1].trim() === direction;
@@ -230,29 +249,35 @@
                     if(!match) { renderCard(index + 1); return; }
 
                     const data = match.split(';');
+                    const cardId = data[0].trim();
+                    const hashtag = (data[3] || "#운명").trim();
                     const fullOracle = `${data[4]||""} ${data[5]||""} ${data[6]||""}`.trim();
+
                     let stepTitle = (index < 2) ? `📜 [과거] 흐름 #${index+1}` : (index < 4) ? `✨ [현재] 에너지 #${index+1}` : (index === 4) ? `🔮 [미래] 방향` : `👑 [최종 신탁] 해답`;
                     let stepColor = (index === 5) ? "#FFD700" : (index >= 2 && index <= 3) ? "#00ffcc" : "var(--gold)";
 
                     const cardDiv = document.createElement('div'); cardDiv.className = 'card-item';
-                    cardDiv.innerHTML = `<div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; border:1px solid ${stepColor};">
+                    const isFinal = (index === 5);
+                    const finalStyle = isFinal ? `border:3px solid #FFD700; box-shadow: 0 0 40px rgba(255,215,0,0.5); transform: scale(1.05);` : `border:1px solid ${stepColor};`;
+                    
+                    cardDiv.innerHTML = `<div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
                             <div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:15px;">
-                                <div style="flex:0 0 75px; height:120px; border-radius:8px; overflow:hidden; border: 1px solid ${stepColor};">
-                                    <img src="${mapKeyToFileName(data[0])}" class="${isRev ? 'tarot-card upside-down' : ''}" style="width:100%; height:100%; object-fit:cover;">
+                                <div style="flex:0 0 75px; height:120px; border-radius:8px; overflow:hidden; border: 1px solid ${isFinal ? '#FFD700' : stepColor};">
+                                    <img src="${mapKeyToFileName(cardId)}" class="${isRev ? 'tarot-card upside-down' : ''}" style="width:100%; height:100%; object-fit:cover;">
                                 </div>
                                 <div style="flex:1;">
-                                    <div style="color:${stepColor}; font-weight:900;">${stepTitle}</div>
-                                    <div style="color:var(--bright-gold); font-size:0.85rem; font-weight:700; margin-top:10px;">${data[3].trim()} ${isRev ? '<span class="rev-badge">REV 🔄</span>' : ''}</div>
+                                    <div style="line-height:1.3;"><div style="color:${isFinal ? '#FFD700' : stepColor}; font-weight:900;">${stepTitle}</div>
+                                        ${isRev ? `<div style="margin-top:8px;"><span class="rev-badge" style="background:rgba(255,0,0,0.2); color:#ff4d4d; border:1px solid #ff4d4d; font-size:0.75rem; padding:2px 6px; border-radius:4px; font-weight:900;">REV 🔄</span></div>` : ""}
+                                    </div><div style="color:var(--bright-gold); font-size:0.85rem; font-weight:700; margin-top:10px;">${hashtag}</div>
                                 </div>
                             </div><div id="text-${index}" style="color:#eee; font-size:1.05rem; line-height:1.9; word-break:keep-all; min-height:80px;"></div></div>`;
                     cardList.appendChild(cardDiv);
                     
                     setTimeout(() => { 
-                        cardDiv.classList.add('card-show'); 
-                        cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                        typeWriter(document.getElementById("text-" + index), fullOracle, 40, () => { 
-                            setTimeout(() => renderCard(index + 1), 1000); 
-                        });
+                        cardDiv.classList.add('card-show'); cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                        setTimeout(() => { typeWriter(document.getElementById("text-" + index), fullOracle, isFinal ? 50 : 35, () => { 
+                            setTimeout(() => renderCard(index + 1), 1300); 
+                        }); }, 800);
                     }, 150);
                 }
                 renderCard(0);
