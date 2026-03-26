@@ -170,9 +170,9 @@
         </div>
     </div>
 
-    <script src="./data_ko.js/data_ko.js"></script>
+ <script src="./data_ko.js/data_ko.js"></script>
 
-    <script>
+<script>
         // 1. [보안 및 F12 대응]
         (function() {
             document.addEventListener('contextmenu', e => e.preventDefault());
@@ -203,7 +203,7 @@
             dust.style.boxShadow = '0 0 5px var(--gold)';
             document.body.appendChild(dust);
             const angle = Math.random() * Math.PI * 2;
-            dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*40}px, ${Math.sin(angle)*40}px) scale(0)` }], { duration: 1500 }).onfinish = () => dust.remove();
+            dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*40}px, ${Math.sin(angle)*40}px) scale(0)` }], { duration: 1800 }).onfinish = () => dust.remove();
         }
         setInterval(createGoldDust, 80);
 
@@ -233,28 +233,33 @@
             type();
         }
 
-        // [교정된 함수] 대소문자 및 경로 문제를 해결합니다.
+       /* [최종 수술] mapKeyToFileName 함수 전체를 이 내용으로 교체하십시오 */
 function mapKeyToFileName(cardKey) {
     try {
-        const key = cardKey.trim().toUpperCase(); // M00 형태
+        // 1. 입력된 카드 키를 대문자로 통일합니다 (예: M01, C05)
+        const key = cardKey.trim().toUpperCase(); 
         let num = "";
         
+        // 2. 메이저 카드와 마이너 카드의 숫자 매핑 로직 (기존 유지)
         if (key.startsWith('M')) {
-            // M01 -> 01 추출
             num = key.replace(/[^0-9]/g, "").padStart(2, '0');
         } else {
-            // 마이너 카드 계산 로직
             let s = key.substring(0, 1), v = parseInt(key.substring(1));
             let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
             num = (b + v - 1).toString().padStart(2, '0');
         }
 
-         return "images/cards/m" + num + ".jpg"; 
+        // [핵심 교정 지점] 
+        // 마스터님의 깃허브 트리 구조(최상위 폴더)에 맞춰 폴더 경로("./", "images/cards/")를 싹 지웁니다.
+        // 그리고 실제 파일명(m01.jpg)과 일치하도록 소문자 'm'과 소문자 '.jpg'를 붙여 파일명만 반환합니다.
+        // 이 한 줄이 깃허브에서 이미지를 나오게 하는 열쇠입니다.
+        return "m" + num + ".jpg"; 
+
     } catch (e) { 
-        return "images/cards/m00.jpg"; 
+        // 3. 에러 발생 시 비상용 카드를 반환합니다.
+        return "m00.jpg"; 
     }
 }
-
         // 4. [메인 로직]
         function reveal() {
             const seedInput = document.getElementById('seed-input');
@@ -333,7 +338,7 @@ function mapKeyToFileName(cardKey) {
                         setTimeout(() => {
                             const target = document.getElementById("text-" + index);
                             typeWriter(target, fullOracle, isFinal ? 45 : 30, () => {
-                                setTimeout(() => renderCard(index + 1), 1200);
+                                setTimeout(() => renderCard(index + 1), 300);
                             });
                         }, 800);
                     }, 100);
