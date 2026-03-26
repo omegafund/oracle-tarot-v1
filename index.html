@@ -3,39 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <title>ORACLE TAROT PRO - MASTERPIECE</title>
 
-    <link rel="icon" href="icon.png?v=2" type="image/png">
-    <link rel="apple-touch-icon" href="icon.png?v=2">
-    <link rel="shortcut icon" href="icon.png?v=2">
-    
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="images/icon/icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <style>
-    /* [마스터님의 22,078자 디자인 완전 보존] */
     :root { 
         --gold: #D4AF37; --bright-gold: #FFF5C3; --dark-gold: #8C6212; --bg: #000000; --text: #ffffff;
         --font: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
     }    
     body { 
-        margin: 0; padding: 0; background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
-        color: var(--text); font-family: var(--font); display: flex; justify-content: center; 
-        min-height: 100vh; height: auto; overflow-y: auto; transition: background 2.5s ease-in-out; overflow-x: hidden;
+        margin: 0; padding: 0; 
+        background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+        color: var(--text); font-family: var(--font); 
+        display: flex; justify-content: center; 
+        min-height: 100vh; height: auto; overflow-y: auto; 
+        transition: background 2.5s ease-in-out;
+        overflow-x: hidden;
     }
+
     #app-container { 
-        width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; text-align: center; 
-        padding: 95px 25px 120px 25px; box-sizing: border-box; height: auto; min-height: 100vh; position: relative;
-        border-left: 1px solid rgba(212, 175, 55, 0.15); border-right: 1px solid rgba(212, 175, 55, 0.15);
+        width: 100%; max-width: 500px; 
+        display: flex; flex-direction: column; align-items: center; 
+        text-align: center; 
+        padding: 95px 25px 120px 25px; 
+        box-sizing: border-box;
+        height: auto; min-height: 100vh; position: relative;
+        border-left: 1px solid rgba(212, 175, 55, 0.15);
+        border-right: 1px solid rgba(212, 175, 55, 0.15);
     }
-    #app-container::before, #app-container::after { content: "✨"; position: absolute; font-size: 1.2rem; color: var(--gold); opacity: 0.7; }
-    #app-container::before { top: 100px; left: 35px; } #app-container::after { top: 100px; right: 35px; }
+
+    #app-container::before, #app-container::after {
+        content: "✨"; position: absolute; font-size: 1.2rem; color: var(--gold); opacity: 0.7;
+    }
+    #app-container::before { top: 100px; left: 35px; } 
+    #app-container::after { top: 100px; right: 35px; }
 
     .gold-title { color: var(--gold); letter-spacing: 0.3em; font-size: 2.3rem; margin-top: 0; margin-bottom: 5px; font-weight: 900; text-shadow: 0 0 15px rgba(212,175,55,0.6); }
     .sub-title { color: var(--gold); font-size: 0.95rem; letter-spacing: 0.5em; margin-bottom: 75px; display: block; font-weight: 800; }
 
-    .input-system-wrapper { position: relative; width: 100%; max-width: 400px; height: 115px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+    .input-system-wrapper { 
+        position: relative; width: 100%; max-width: 400px; 
+        height: 115px; 
+        margin: 0 auto; display: flex; align-items: center; justify-content: center; 
+    }
     .beveled-border { 
         position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
         background: linear-gradient(145deg, #FFF5C3, var(--gold), var(--dark-gold)); 
@@ -43,43 +58,74 @@
         z-index: 1; pointer-events: none; animation: borderPulse 3s infinite ease-in-out; 
     }
     .beveled-inner { 
-        position: absolute; width: calc(100% - 6px); height: calc(100% - 6px); top: 3px; left: 3px; background: linear-gradient(135deg, #2D0054, #120022); 
-        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px); z-index: 2; 
+        position: absolute; width: calc(100% - 6px); height: calc(100% - 6px); top: 3px; left: 3px;
+        background: linear-gradient(135deg, #2D0054, #120022); 
+        clip-path: polygon(14px 0%, calc(100% - 14px) 0%, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0% calc(100% - 14px), 0% 14px); 
+        box-shadow: 0 0 20px rgba(191, 90, 242, 0.4); z-index: 2; 
     }
-    .gold-input { position: relative; z-index: 10; background: transparent; border: none; outline: none; color: #ffffff; font-size: 1rem; width: 88%; font-weight: bold; text-align: center; font-family: var(--font); resize: none; line-height: 1.7; padding: 10px 0; overflow: hidden; }
-    #fake-placeholder { position: absolute; z-index: 5; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; transition: 0.3s; }
+    
+    .gold-input { 
+        position: relative; z-index: 10; background: transparent; border: none; outline: none; 
+        color: #ffffff; font-size: 1rem; width: 88%; font-weight: bold; text-align: center;
+        font-family: var(--font); resize: none; line-height: 1.7; padding: 10px 0;
+        overflow: hidden;
+    }
+
+    #fake-placeholder {
+        position: absolute; z-index: 5; width: 100%; 
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        pointer-events: none; transition: 0.3s;
+    }
     @keyframes borderPulse { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.01); } }
 
-    .intuition-text { color: var(--bright-gold); font-size: 0.7rem; font-style: italic; letter-spacing: 0.25em; margin: 25px 0 60px 0; text-transform: uppercase; font-weight: 800; text-shadow: 0 0 8px rgba(212, 175, 55, 0.5); }
-    .button-container { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
-    .spiritual-pointer { position: absolute; bottom: -35px; right: -25px; font-size: 2.2rem; z-index: 10; transform: rotate(150deg); animation: handMove 1.1s infinite ease-in-out; filter: drop-shadow(0 0 15px var(--gold)); }
-    @keyframes handMove { 0%, 100% { transform: translateY(0) rotate(150deg); } 50% { transform: translateY(-15px) rotate(150deg); } }
+    .intuition-text { 
+        color: var(--bright-gold); font-size: 0.7rem; font-style: italic; letter-spacing: 0.25em; 
+        margin: 25px 0 60px 0; text-transform: uppercase; font-weight: 800; 
+        text-shadow: 0 0 8px rgba(212, 175, 55, 0.5); 
+    }
 
-    .gold-button { background: linear-gradient(180deg, #FFF5C3 0%, #D4AF37 100%); color: #000; border: none; padding: 18px 0; width: 100%; border-radius: 50px; font-weight: 900; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-shadow: 0 10px 40px rgba(212,175,55,0.4); }
+    .button-container { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
+    .spiritual-pointer { 
+        position: absolute; bottom: -30px; right: -20px; 
+        font-size: 1.8rem; z-index: 10; 
+        transform: rotate(150deg); animation: handMove 1.1s infinite ease-in-out; 
+        filter: drop-shadow(0 0 10px var(--gold)); 
+    }
+    @keyframes handMove { 0%, 100% { transform: translateY(0) rotate(150deg); } 50% { transform: translateY(-12px) rotate(150deg); } }
+
+    .gold-button { 
+        background: linear-gradient(180deg, #FFF5C3 0%, #D4AF37 100%); color: #000; border: none; 
+        padding: 18px 0; width: 100%; border-radius: 50px; font-weight: 900; cursor: pointer; 
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+        box-shadow: 0 10px 40px rgba(212,175,55,0.4);
+    }
     .btn-ko { font-size: 1.4rem; letter-spacing: 0.05em; line-height: 1.2; }
     .btn-en { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; opacity: 1; text-transform: uppercase; }
 
-    .legal-notice { width: 85%; max-width: 400px; margin: 80px auto 20px auto; font-size: 0.7rem; color: var(--gold); line-height: 1.8; text-align: center; border-top: 1.5px solid rgba(212, 175, 55, 0.3); padding-top: 25px; font-weight: 700; text-shadow: 1px 1px 2px #000; word-break: keep-all; }
+    .legal-notice { 
+        width: 85%; max-width: 400px; margin: 80px auto 20px auto; 
+        font-size: 0.7rem; color: var(--gold); line-height: 1.8; text-align: center; 
+        border-top: 1.5px solid rgba(212, 175, 55, 0.3); padding-top: 25px; 
+        font-weight: 700; text-shadow: 1px 1px 2px #000;
+        word-break: keep-all;
+    }
 
-    /* 결과 뷰 디자인 */
     #result-view { display: none; width: 100%; flex-direction: column; align-items: center; }
     .category-bar { color: var(--gold); font-size: 1.1rem; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 15px 0; margin: 20px 0 20px 0; width: 100%; font-weight: bold; }
-    #rev-guide { display: none; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold); border-radius: 12px; padding: 15px; margin: 0 0 25px 0; color: var(--bright-gold); font-size: 0.85rem; line-height: 1.7; text-align: left; word-break: keep-all; font-weight: 600; }
-    .card-item { width: 100%; max-width: 450px; opacity: 0; transform: translateY(50px); transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1); margin-bottom: 30px; }
-    .card-show { opacity: 1; transform: translateY(0); filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.3)); }
+    #rev-guide { 
+        display: none; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold); border-radius: 12px; 
+        padding: 15px; margin: 0 0 25px 0; color: var(--bright-gold); font-size: 0.85rem; 
+        line-height: 1.7; text-align: left; word-break: keep-all; font-weight: 600;
+    }
+    .card-item { width: 100%; max-width: 450px; opacity: 0; transform: translateY(50px); transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1); margin-bottom: 25px; }
+    .card-show { opacity: 1; transform: translateY(0); filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.2)); }
     .tarot-card.upside-down { transform: rotate(180deg); filter: sepia(0.4) brightness(0.7); }
     .rev-badge { background: rgba(255, 68, 68, 0.15); color: #ff4444; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 8px; border: 1px solid rgba(255, 68, 68, 0.3); vertical-align: middle; }
     .btn-home { background: rgba(212,175,55,0.2); border: 2px solid var(--gold); color: var(--gold); padding: 12px 50px; border-radius: 50px; cursor: pointer; margin: 40px 0; display: none; flex-direction: column; align-items: center; gap: 4px; font-weight: 800; opacity: 0; transition: 0.5s; }
-    
-    .transition-card { position: fixed; top: 50%; left: 50%; width: 120px; height: 190px; background: linear-gradient(135deg, var(--dark-gold), #fff, var(--gold)); border: 3px solid #fff; border-radius: 12px; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; box-shadow: 0 0 50px var(--gold); }
-    
-    @keyframes whirlAndAway { 
-        0% { transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) scale(0.2); opacity: 0; } 
-        30% { opacity: 1; transform: translate(-50%, -50%) rotateX(720deg) rotateY(1080deg) scale(1.6); } 
-        100% { transform: translate(-50%, -250%) rotateX(1440deg) rotateY(2160deg) scale(0); opacity: 0; } 
-    }
-    .animate-whirl { animation: whirlAndAway 2.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-    .particle { position: fixed; border-radius: 50%; pointer-events: none; z-index: 9999; }
+    .particle { position: fixed; width: 4px; height: 4px; background: var(--gold); border-radius: 50%; pointer-events: none; z-index: 9999; box-shadow: 0 0 10px var(--gold); }
+    .transition-card { position: fixed; top: 50%; left: 50%; width: 100px; height: 160px; background: linear-gradient(135deg, var(--dark-gold), var(--gold)); border: 2px solid #fff; border-radius: 10px; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; }
+    @keyframes whirlAndAway { 0% { transform: translate(-50%, -50%) rotateY(0deg) scale(0.5); opacity: 0; } 20% { opacity: 1; transform: translate(-50%, -50%) rotateY(720deg) scale(1.2); } 100% { transform: translate(-50%, -150%) rotateY(1440deg) scale(0); opacity: 0; } }
+    .animate-whirl { animation: whirlAndAway 1.5s ease-in-out forwards; }
     </style>
 </head>
 <body oncontextmenu="return false" onselectstart="return false">
@@ -87,14 +133,17 @@
         <div id="home-view">
             <h1 class="gold-title">ORACLE TAROT PRO</h1>
             <span class="sub-title">THE MASTERPIECE</span>
+            
             <div class="input-system-wrapper">
-                <div class="beveled-border"></div><div class="beveled-inner"></div>
+                <div class="beveled-border"></div>
+                <div class="beveled-inner"></div>
                 <div id="fake-placeholder">
-                    <div style="color: var(--gold); font-size: 1.1rem; font-weight: 900; text-shadow: 0 0 10px rgba(212,175,55,0.5);">마음의 질문을 깊게 새기소서</div>
-                    <div style="color: rgba(255,255,255,0.5); font-size: 0.75rem; font-weight: 700;">(질문을 입력하고 아래 버튼을 누르십시오)</div>
+                    <div style="color: var(--gold); font-size: 1rem; font-weight: 900; text-shadow: 0 0 8px rgba(212,175,55,0.4);">마음의 질문을 깊게 새기소서</div>
+                    <div style="color: rgba(255,255,255,0.5); font-size: 0.7rem; font-weight: 700;">(입력 후 아래 신탁확인 버튼을 누르세요)</div>
                 </div>
                 <textarea id="seed-input" class="gold-input" oninput="document.getElementById('fake-placeholder').style.opacity = this.value ? '0' : '1';" autocomplete="off"></textarea>
             </div>
+
             <div class="intuition-text">Trust your spiritual flow</div>
             <div class="button-container">
                 <button class="gold-button" onclick="reveal()">
@@ -103,181 +152,194 @@
                 </button>
                 <div class="spiritual-pointer" id="pointer-hand">👇</div>
             </div>
-            <div class="legal-notice">본 결과는 <b>타로와 주역의 인문학적</b> 해석을 바탕으로 한 <strong>참고용 콘텐츠</strong>입니다.<br>모든 선택과 결정의 책임은 <strong>사용자 본인</strong>에게 있습니다.</div>
+            <div class="legal-notice">
+                본 결과는 <b>타로와 주역의 인문학적</b> 해석을 바탕으로 한<br><strong>참고용 콘텐츠</strong>입니다.<br>
+                모든 선택과 결정의 책임은 <strong>사용자 본인</strong>에게 있습니다.
+            </div>
         </div>
 
         <div id="result-view">
             <h1 class="gold-title" style="margin-top:10px; font-size:1.8rem;">ORACLE TAROT PRO</h1>
-            <div id="category-display" class="category-bar">✨ 영성적 서사 : 6인의 신탁 가이드 ✨</div>
-            <div id="rev-guide">🔮 <strong>영성적 안내:</strong> 역방향(REV)은 에너지가 정체되거나 반전된 상태를 의미하며, 내면의 성찰을 촉구하는 섬세한 조언입니다.</div>
+            <div id="category-display" class="category-bar"></div>
+            <div id="rev-guide">🔮 <strong>영성적 안내:</strong> 역방향(REV)은 에너지가 정체되거나 반전된 상태를 의미하며, 경고가 아닌 '내면의 성찰'을 촉구하는 우주의 섬세한 조언입니다.</div>
             <div id="card-list" style="width:100%;"></div>
             <button id="home-btn" class="btn-home" onclick="location.reload()">
-                <span class="btn-ko">새로운 운명 확인</span><span class="btn-en">NEW DESTINY</span>
+                <span class="btn-ko">새로운 운명 확인</span>
+                <span class="btn-en">NEW DESTINY</span>
             </button>
         </div>
     </div>
 
-    <script src="data_ko.js"></script>
+    <script src="./data_ko.js/data_ko.js"></script>
+
     <script>
-        /* [보안 기능] */
+        // 1. [보안 및 F12 대응]
         (function() {
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('selectstart', e => e.preventDefault());
-            document.addEventListener('keydown', e => { if (e.keyCode !== 123 && (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) e.preventDefault(); });
+            document.addEventListener('keydown', function(e) {
+                if (e.keyCode === 123) return true; 
+                if ((e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) {
+                    e.preventDefault(); return false;
+                }
+            });
         })();
 
-        /* [엔진 1] 시드 랜덤 시스템 */
-        function hashString(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0; }
-            return Math.abs(hash);
-        }
-        function createSeededRandom(seed) {
-            return function() { const x = Math.sin(seed++) * 10000; return x - Math.floor(x); }
-        }
+        // [교정] 2. 데이터 영역: 외부 파일에서 데이터를 안전하게 가져옵니다.
+        const rawData = window.rawData_KO || "";
 
-        /* [엔진 2] 금가루 효과 (상시 가동) */
+        // 3. [유틸리티 함수]
         function createGoldDust() {
             const hand = document.getElementById('pointer-hand');
             if (!hand || document.getElementById('home-view').style.display === 'none') return;
-            for(let i=0; i<2; i++) {
-                const dust = document.createElement('div');
-                const rect = hand.getBoundingClientRect();
-                const size = Math.random() * 4 + 1.5;
-                dust.className = 'particle';
-                dust.style.width = size + 'px'; dust.style.height = size + 'px';
-                dust.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 45) + 'px';
-                dust.style.top = (rect.top + (Math.random() - 0.5) * 45) + 'px';
-                dust.style.background = Math.random() > 0.5 ? 'var(--bright-gold)' : 'var(--gold)';
-                dust.style.boxShadow = `0 0 ${size*2}px var(--gold)`;
-                document.body.appendChild(dust);
-                const angle = Math.random() * Math.PI * 2;
-                dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*60}px, ${Math.sin(angle)*60}px) scale(0)` }], { duration: 1200 + Math.random()*800 }).onfinish = () => dust.remove();
+            const dust = document.createElement('div');
+            const rect = hand.getBoundingClientRect();
+            const size = Math.random() * 3 + 1;
+            dust.style.width = size + 'px'; dust.style.height = size + 'px';
+            dust.style.left = (rect.left + rect.width / 2 + (Math.random() - 0.5) * 30) + 'px';
+            dust.style.top = (rect.top + (Math.random() - 0.5) * 30) + 'px';
+            dust.style.position = 'fixed'; dust.style.background = 'var(--bright-gold)';
+            dust.style.borderRadius = '50%'; dust.style.pointerEvents = 'none'; dust.style.zIndex = '9';
+            dust.style.boxShadow = '0 0 5px var(--gold)';
+            document.body.appendChild(dust);
+            const angle = Math.random() * Math.PI * 2;
+            dust.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: `translate(${Math.cos(angle)*40}px, ${Math.sin(angle)*40}px) scale(0)` }], { duration: 1500 }).onfinish = () => dust.remove();
+        }
+        setInterval(createGoldDust, 80);
+
+        function createParticle() {
+            const p = document.createElement('div'); p.className = 'particle';
+            const x = window.innerWidth / 2, y = window.innerHeight / 2;
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            document.body.appendChild(p);
+            const angle = Math.random() * Math.PI * 2, velocity = 400 + Math.random() * 600;
+            const destX = Math.cos(angle) * velocity, destY = Math.sin(angle) * velocity;
+            p.animate([{ transform: 'translate(-50%, -50%) scale(1.8)', opacity: 1 }, { transform: `translate(${destX}px, ${destY}px) scale(0)`, opacity: 0 }], { duration: 1500, easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)', fill: 'forwards' });
+            setTimeout(() => p.remove(), 2000);
+        }
+
+        function typeWriter(element, text, speed, callback) {
+            let i = 0; element.innerHTML = "";
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i++);
+                    const rect = element.closest('.card-item').getBoundingClientRect();
+                    if (rect.bottom > window.innerHeight - 100) {
+                        window.scrollBy({ top: 25, behavior: 'smooth' });
+                    }
+                    setTimeout(type, speed);
+                } else if (callback) callback();
             }
-        }
-        setInterval(createGoldDust, 40);
-
-        function createMagicParticle() {
-            for (let i = 0; i < 200; i++) {
-                setTimeout(() => {
-                    const p = document.createElement('div'); p.className = 'particle';
-                    const x = window.innerWidth / 2, y = window.innerHeight / 2;
-                    const size = Math.random() * 5 + 2;
-                    p.style.width = size + 'px'; p.style.height = size + 'px';
-                    p.style.left = x + 'px'; p.style.top = y + 'px';
-                    p.style.background = 'var(--gold)'; p.style.boxShadow = '0 0 10px var(--gold)';
-                    document.body.appendChild(p);
-                    const angle = Math.random() * Math.PI * 2, velocity = 500 + Math.random() * 800;
-                    const destX = Math.cos(angle) * velocity, destY = Math.sin(angle) * velocity;
-                    p.animate([{ transform: 'translate(-50%, -50%) scale(2)', opacity: 1 }, { transform: `translate(${destX}px, ${destY}px) scale(0)`, opacity: 0 }], { duration: 2000, easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)', fill: 'forwards' }).onfinish = () => p.remove();
-                }, i * 2);
-            }
+            type();
         }
 
-        /* [엔진 3] 타이핑 효과 */
-        function typeWriter(element, text, idx, callback) {
-            if (idx < text.length) { 
-                element.innerHTML += text.charAt(idx); 
-                if (idx % 3 === 0) element.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                setTimeout(() => typeWriter(element, text, idx+1, callback), 35); 
-            } else if(callback) callback();
+        // [교정된 함수] 대소문자 및 경로 문제를 해결합니다.
+function mapKeyToFileName(cardKey) {
+    try {
+        const key = cardKey.trim().toUpperCase(); // M00 형태
+        let num = "";
+        
+        if (key.startsWith('M')) {
+            // M01 -> 01 추출
+            num = key.replace(/[^0-9]/g, "").padStart(2, '0');
+        } else {
+            // 마이너 카드 계산 로직
+            let s = key.substring(0, 1), v = parseInt(key.substring(1));
+            let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64;
+            num = (b + v - 1).toString().padStart(2, '0');
         }
 
-        function mapKeyToFileName(cardKey) {
-            try {
-                const key = cardKey.trim().toUpperCase();
-                let num = key.startsWith('M') ? key.replace(/[^0-9]/g, "").padStart(2, '0') : 
-                        (() => { let s = key.substring(0, 1), v = parseInt(key.substring(1)); let b = (s === 'C') ? 22 : (s === 'S') ? 36 : (s === 'P') ? 50 : 64; return (b + v - 1).toString().padStart(2, '0'); })();
-                return "m" + num + ".jpg"; 
-            } catch (e) { return "m00.jpg"; }
-        }
+         return "images/cards/m" + num + ".jpg"; 
+    } catch (e) { 
+        return "images/cards/m00.jpg"; 
+    }
+}
 
-        /* [메인 핵심 함수] */
+        // 4. [메인 로직]
         function reveal() {
-            const seedText = document.getElementById('seed-input').value.trim();
-            if (!seedText) { alert("상담 내용을 입력해주세요."); return; }
+            const seedInput = document.getElementById('seed-input');
+            const seed = seedInput ? seedInput.value.trim() : "";
+            if (!seed) { alert("상담 내용을 입력해주세요."); return; }
 
-            const rawData = window.rawData_KO || ""; // 데이터 즉시 바인딩
-            const seededRand = createSeededRandom(hashString(seedText.toLowerCase().replace(/\s/g,"")));
-            createMagicParticle();
-
+            for (let i = 0; i < 150; i++) setTimeout(createParticle, i * 3);
             const tCard = document.createElement('div'); tCard.className = 'transition-card animate-whirl';
             document.body.appendChild(tCard);
-            document.getElementById('home-view').style.opacity = "0";
+
+            const homeView = document.getElementById('home-view');
+            homeView.style.transition = "0.8s"; homeView.style.opacity = "0";
 
             setTimeout(() => {
-                tCard.remove(); 
-                document.getElementById('home-view').style.display = 'none';
+                tCard.remove(); homeView.style.display = 'none';
                 document.getElementById('result-view').style.display = 'flex';
+                document.getElementById('category-display').innerText = "✨ 영성적 서사 : 6인의 신탁 가이드 ✨";
                 document.getElementById('rev-guide').style.display = 'block';
 
-                const lines = rawData.trim().split('\n').filter(l => l.includes(';'));
-                const keys = [...new Set(lines.map(l => l.split(';')[0].trim()))];
-                
-                // 시드 기반 셔플
-                for (let i = keys.length - 1; i > 0; i--) {
-                    const j = Math.floor(seededRand() * (i + 1));
-                    [keys[i], keys[j]] = [keys[j], keys[i]];
-                }
-                const selectedKeys = keys.slice(0, 6);
+                const allLines = rawData.trim().split('\n').filter(line => line.includes(';'));
+                const shuffled = allLines.sort(() => 0.5 - Math.random()).slice(0, 6);
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
-
-                /* 카드 전개 시작 */
+                
                 function renderCard(index) {
-                    if (index >= 6) {
+                    if (index >= shuffled.length) {
                         const btn = document.getElementById('home-btn'); btn.style.display = "flex";
-                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 800);
+                        setTimeout(() => { btn.style.opacity = "1"; btn.scrollIntoView({ behavior: 'smooth' }); }, 500);
                         return;
                     }
 
-                    const currentKey = selectedKeys[index].trim();
-                    const isRev = seededRand() > 0.5;
-                    const direction = isRev ? "역" : "정";
+                    const data = shuffled[index].split(';');
+                    const cardId = data[0].trim();
+                    const isRev = Math.random() > 0.5;
+                    const hashtag = data[3];
+                    const fullOracle = `${data[4]} ${data[5]} ${data[6]}`;
 
-                    let match = lines.find(l => {
-                        const d = l.split(';');
-                        return d[0].trim() === currentKey && d[1].trim() === direction;
-                    }) || lines.find(l => l.split(';')[0].trim() === currentKey);
+                    let stepTitle = "";
+                    let stepColor = "var(--gold)";
+                    let isFinal = (index === 5);
 
-                    if(!match) { renderCard(index + 1); return; }
+                    if (index < 2) stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">📜 [과거]</span><br>형성된 흐름 #${index + 1}`;
+                    else if (index < 4) { stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">✨ [현재]</span><br>직면한 에너지 #${index + 1}`; stepColor = "#00ffcc"; }
+                    else if (index === 4) { stepTitle = `<span style="font-size:0.8rem; opacity:0.8;">🔮 [미래]</span><br>도달할 방향`; stepColor = "var(--bright-gold)"; }
+                    else { 
+                        stepTitle = `<span style="font-size:0.85rem; opacity:0.9;">👑 [최종 신탁]</span><br><span style="font-size:1.2rem; display:block; margin-top:4px; letter-spacing:0.05em;">운명의 해답</span>`; 
+                        stepColor = "#FFD700"; 
+                    }
 
-                    const d = match.split(';');
-                    const cardId = d[0].trim();
-                    const hashtag = (d[3] || "#운명").trim();
-                    const fullOracle = `${d[4]||""} ${d[5]||""} ${d[6]||""}`.trim();
-
-                    let stepTitle = (index < 2) ? `📜 [과거] #${index + 1}` : (index < 4) ? `✨ [현재] #${index + 1}` : (index === 4) ? `🔮 [미래] 방향` : `👑 [최종 신탁]`;
-                    let stepColor = (index === 5) ? "#FFD700" : (index >= 2 && index <= 3) ? "#00ffcc" : "var(--gold)";
-
-                    const cardDiv = document.createElement('div'); cardDiv.className = 'card-item';
-                    const isFinal = (index === 5);
-                    const finalStyle = isFinal ? `border:3px solid #FFD700; box-shadow: 0 0 40px rgba(255,215,0,0.5); transform: scale(1.05);` : `border:1px solid ${stepColor};`;
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card-item';
+                    const finalStyle = isFinal ? `border:3px solid #FFD700; box-shadow: 0 0 35px rgba(255,215,0,0.4); transform: scale(1.05);` : `border:1px solid ${stepColor};`;
                     
-                    cardDiv.innerHTML = `<div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
+                    cardDiv.innerHTML = `
+                        <div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
                             <div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:15px;">
-                                <div style="flex:0 0 75px; height:120px; border-radius:8px; overflow:hidden; border: 1px solid ${isFinal ? '#FFD700' : stepColor};">
+                                <div style="flex:0 0 70px; height:110px; border-radius:8px; overflow:hidden; border: 1px solid ${isFinal ? '#FFD700' : stepColor};">
                                     <img src="${mapKeyToFileName(cardId)}" class="${isRev ? 'tarot-card upside-down' : ''}" style="width:100%; height:100%; object-fit:cover;">
                                 </div>
                                 <div style="flex:1;">
-                                    <div style="color:${isFinal ? '#FFD700' : stepColor}; font-weight:900;">${stepTitle}</div>
-                                    <div style="color:var(--bright-gold); font-size:0.85rem; font-weight:700; margin:10px 0;">
-                                        ${hashtag} ${isRev ? '<span class="rev-badge">REV 🔄</span>' : ''}
+                                    <div style="line-height:1.3;">
+                                        <div style="color:${isFinal ? '#FFD700' : stepColor}; font-weight:900;">${stepTitle}</div>
+                                        ${isRev ? `<div style="margin-top:8px;"><span class="rev-badge" style="background:rgba(255,0,0,0.2); color:#ff4d4d; border:1px solid #ff4d4d; font-size:0.75rem; padding:2px 6px; border-radius:4px; font-weight:900;">REV 🔄</span></div>` : ""}
                                     </div>
+                                    <div style="color:var(--bright-gold); font-size:0.85rem; font-weight:700; margin-top:10px;">${hashtag}</div>
                                 </div>
-                            </div><div id="text-${index}" style="color:#eee; font-size:1.05rem; line-height:1.9; word-break:keep-all; min-height:80px;"></div></div>`;
+                            </div>
+                            <div id="text-${index}" style="color:#eee; font-size:1rem; line-height:1.8; word-break:keep-all; min-height:80px;"></div>
+                        </div>`;
                     
                     cardList.appendChild(cardDiv);
                     
-                    // 연출: 카드 등장 -> 타이핑 -> 끝난 후 1초 대기 -> 다음 카드
-                    setTimeout(() => { 
-                        cardDiv.classList.add('card-show'); cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                        typeWriter(document.getElementById("text-" + index), fullOracle, 0, () => { 
-                            setTimeout(() => renderCard(index +0.5), 500); 
-                        });
-                    }, 300);
+                    setTimeout(() => {
+                        cardDiv.classList.add('card-show');
+                        cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                        
+                        setTimeout(() => {
+                            const target = document.getElementById("text-" + index);
+                            typeWriter(target, fullOracle, isFinal ? 45 : 30, () => {
+                                setTimeout(() => renderCard(index + 1), 1200);
+                            });
+                        }, 800);
+                    }, 100);
                 }
                 renderCard(0);
-            }, 2500); 
+            }, 1500);
         }
     </script>
 </body>
