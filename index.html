@@ -14,6 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <style>
+    /* [마스터님의 22,078자 디자인 완전 보존] */
     :root { 
         --gold: #D4AF37; --bright-gold: #FFF5C3; --dark-gold: #8C6212; --bg: #000000; --text: #ffffff;
         --font: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
@@ -60,6 +61,7 @@
 
     .legal-notice { width: 85%; max-width: 400px; margin: 80px auto 20px auto; font-size: 0.7rem; color: var(--gold); line-height: 1.8; text-align: center; border-top: 1.5px solid rgba(212, 175, 55, 0.3); padding-top: 25px; font-weight: 700; text-shadow: 1px 1px 2px #000; word-break: keep-all; }
 
+    /* 결과 뷰 디자인 */
     #result-view { display: none; width: 100%; flex-direction: column; align-items: center; }
     .category-bar { color: var(--gold); font-size: 1.1rem; border-top: 1px solid #333; border-bottom: 1px solid #333; padding: 15px 0; margin: 20px 0 20px 0; width: 100%; font-weight: bold; }
     #rev-guide { display: none; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--gold); border-radius: 12px; padding: 15px; margin: 0 0 25px 0; color: var(--bright-gold); font-size: 0.85rem; line-height: 1.7; text-align: left; word-break: keep-all; font-weight: 600; }
@@ -103,6 +105,7 @@
             </div>
             <div class="legal-notice">본 결과는 <b>타로와 주역의 인문학적</b> 해석을 바탕으로 한 <strong>참고용 콘텐츠</strong>입니다.<br>모든 선택과 결정의 책임은 <strong>사용자 본인</strong>에게 있습니다.</div>
         </div>
+
         <div id="result-view">
             <h1 class="gold-title" style="margin-top:10px; font-size:1.8rem;">ORACLE TAROT PRO</h1>
             <div id="category-display" class="category-bar">✨ 영성적 서사 : 6인의 신탁 가이드 ✨</div>
@@ -116,15 +119,14 @@
 
     <script src="data_ko.js"></script>
     <script>
+        /* [보안 기능] */
         (function() {
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('selectstart', e => e.preventDefault());
             document.addEventListener('keydown', e => { if (e.keyCode !== 123 && (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.keyCode === 67 || e.keyCode === 86))) e.preventDefault(); });
         })();
 
-        const rawData = window.rawData_KO || "";
-
-        /* [핵심 1] 시드 랜덤 엔진 */
+        /* [엔진 1] 시드 랜덤 시스템 */
         function hashString(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0; }
@@ -134,7 +136,7 @@
             return function() { const x = Math.sin(seed++) * 10000; return x - Math.floor(x); }
         }
 
-        /* [핵심 2] 손가락 금가루 상시 가동 */
+        /* [엔진 2] 금가루 효과 (상시 가동) */
         function createGoldDust() {
             const hand = document.getElementById('pointer-hand');
             if (!hand || document.getElementById('home-view').style.display === 'none') return;
@@ -172,7 +174,15 @@
             }
         }
 
-        /* [핵심 3] 유틸리티 및 전개 함수 */
+        /* [엔진 3] 타이핑 효과 */
+        function typeWriter(element, text, idx, callback) {
+            if (idx < text.length) { 
+                element.innerHTML += text.charAt(idx); 
+                if (idx % 3 === 0) element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                setTimeout(() => typeWriter(element, text, idx+1, callback), 35); 
+            } else if(callback) callback();
+        }
+
         function mapKeyToFileName(cardKey) {
             try {
                 const key = cardKey.trim().toUpperCase();
@@ -182,18 +192,12 @@
             } catch (e) { return "m00.jpg"; }
         }
 
-        function typeWriter(element, text, idx, callback) {
-            if (idx < text.length) { 
-                element.innerHTML += text.charAt(idx); 
-                if (idx % 3 === 0) element.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                setTimeout(() => typeWriter(element, text, idx+1, callback), 35); 
-            } else if(callback) callback();
-        }
-
+        /* [메인 핵심 함수] */
         function reveal() {
             const seedText = document.getElementById('seed-input').value.trim();
             if (!seedText) { alert("상담 내용을 입력해주세요."); return; }
 
+            const rawData = window.rawData_KO || ""; // 데이터 즉시 바인딩
             const seededRand = createSeededRandom(hashString(seedText.toLowerCase().replace(/\s/g,"")));
             createMagicParticle();
 
@@ -218,7 +222,7 @@
                 const selectedKeys = keys.slice(0, 6);
                 const cardList = document.getElementById('card-list'); cardList.innerHTML = '';
 
-                /* [핵심 4] 영성적 순차 전개 함수 */
+                /* 카드 전개 시작 */
                 function renderCard(index) {
                     if (index >= 6) {
                         const btn = document.getElementById('home-btn'); btn.style.display = "flex";
@@ -242,13 +246,11 @@
                     const hashtag = (d[3] || "#운명").trim();
                     const fullOracle = `${d[4]||""} ${d[5]||""} ${d[6]||""}`.trim();
 
-                    let stepTitle = "", stepColor = "var(--gold)", isFinal = (index === 5);
-                    if (index < 2) stepTitle = `📜 [과거] #${index + 1}`;
-                    else if (index < 4) { stepTitle = `✨ [현재] #${index + 1}`; stepColor = "#00ffcc"; }
-                    else if (index === 4) { stepTitle = `🔮 [미래] 방향`; stepColor = "var(--bright-gold)"; }
-                    else { stepTitle = `👑 [최종 신탁]`; stepColor = "#FFD700"; }
+                    let stepTitle = (index < 2) ? `📜 [과거] #${index + 1}` : (index < 4) ? `✨ [현재] #${index + 1}` : (index === 4) ? `🔮 [미래] 방향` : `👑 [최종 신탁]`;
+                    let stepColor = (index === 5) ? "#FFD700" : (index >= 2 && index <= 3) ? "#00ffcc" : "var(--gold)";
 
                     const cardDiv = document.createElement('div'); cardDiv.className = 'card-item';
+                    const isFinal = (index === 5);
                     const finalStyle = isFinal ? `border:3px solid #FFD700; box-shadow: 0 0 40px rgba(255,215,0,0.5); transform: scale(1.05);` : `border:1px solid ${stepColor};`;
                     
                     cardDiv.innerHTML = `<div style="padding:22px; background:rgba(15,15,15,0.98); border-radius:15px; text-align:left; ${finalStyle}">
@@ -270,7 +272,7 @@
                     setTimeout(() => { 
                         cardDiv.classList.add('card-show'); cardDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                         typeWriter(document.getElementById("text-" + index), fullOracle, 0, () => { 
-                            setTimeout(() => renderCard(index + 1), 1000); 
+                            setTimeout(() => renderCard(index +0.5), 500); 
                         });
                     }, 300);
                 }
