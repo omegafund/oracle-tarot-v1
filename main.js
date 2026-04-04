@@ -1,64 +1,85 @@
-// 1. 각 폴더에서 언어팩 데이터를 소환 (마스터의 폴더 구조 반영)
-import { rawData_KO } from './data_ko/data_ko.js';
-import { rawData_EN } from './data_en/data_en.js';
-import { rawData_TW } from './data_tw/data_tw.js';
+// 1. [제니스 마스터 프롬프트] 및 [API_KEY] 선언부는 상단에 그대로 유지하세요.
+const API_KEY = "AIzaSyA1l1pt2Cr6vl-c6dkdaAfp_SblSyfCVC0"; 
+// 2. [메인 실행 함수]
+export const startZenithOracle = async (cardIDs) => {
+    renderExistingUI(cardIDs); 
 
-// 2. 마스터의 세미콜론(;) 체계를 해석하는 파싱 엔진
-const parseTarotData = (rawString) => {
-    const lines = rawString.trim().split('\n');
-    const db = {};
-    lines.forEach(line => {
-        const [id, dir, cat, tags, past, present, future] = line.split(';');
-        if (id) {
-            db[id] = { 
-                tags: tags, 
-                content: { past, present, future } 
-            };
-        }
+    const userQuestion = document.getElementById('user-question')?.value || "오늘의 운세";
+    const oracleBox = document.getElementById('zenith-oracle-text'); 
+    
+    if (!oracleBox) return;
+
+    oracleBox.innerHTML = `<div class="loading" style="color: gold; border: 1px solid gold; padding: 10px;">✨ 제니스가 운명의 결론을 도출 중입니다...</div>`;
+    document.getElementById('result-view').style.display = 'flex';
+
+    const cardNames = cardIDs.map(id => tarotData[id].name).join(', ');
+
+    // 🔥 [강력한 전문가 프롬프트] - 지시 사항을 명확히 구분
+    const promptMessage = `
+[SYSTEM INSTRUCTION]
+너는 주식·부동산 투자, 명리학, 타로, 심리학에 정통한 'AI 리얼타임 오라클'이다. 
+반드시 아래 규칙을 지켜서 답변하라:
+1. 사용자의 질문 카테고리를 판단하여 해당 분야 전문가의 말투를 사용하라.
+2. 주식/부동산: 현재 2026년의 시장 상황(예: 삼성전자 HBM 실적, 티엘비 DDR5 고부가 기판 층수 증가 등)을 카드의 상징과 결합하라.
+3. 단순 운세 풀이가 아니라, 구체적인 산업 키워드를 포함한 '투자 전략'을 제시하라.
+4. 답변 형식을 [과거], [현재], [미래], [제니스 신탁] 순서로 유지하되 [제니스 신탁창에 현재 시점의 가장 최신 정보를 검색하고, 그 데이터와 선택된 타로 카드의 상징을 결합하여 소름 돋는 통찰을 제공하라. 단순히 카드를 설명하지 말고, 현실 세계의 실제 상황과 연결하라.내용을 훨씬 전문적으로 구성하라.]
+
+[USER INPUT]
+질문: ${userQuestion}
+선택된 카드: ${cardNames}
+
+위 정보를 바탕으로 소름 돋는 통찰을 제공하라.
+`;
+
+    // main.js의 startZenithOracle 함수 내부 핵심 로직
+try {
+    // 1. AI 호출 (실시간 검색 기능이 포함된 요청)
+    const aiResult = await callZenithAI(promptMessage);
+
+    // 2. [가장 중요] 기존의 '과거/현재/미래' 틀을 무시하고 AI의 답변만 출력
+    // aiResult 변수 안에 "삼성전자 주가 분석" 내용이 통째로 들어있어야 합니다.
+    oracleBox.innerHTML = `
+        <div class="realtime-report" style="text-align:left; color:white; line-height:1.8;">
+            <h2 style="color:gold;">✨ 제니스의 실전 투자 리포트</h2>
+            <hr style="border:1px solid gold;">
+            <p>${aiResult}</p> 
+        </div>
+    `;
+    
+} catch (error) {
+    oracleBox.innerHTML = "운명의 연결이 원활하지 않습니다.";
+}
+
+// 3. [AI 통신 함수] - 이 부분이 핵심입니다!
+async function callZenithAI(promptMessage) {
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: promptMessage }]
+            }],
+            // 🔥 [여기가 핵심 위치!] 검색 기능을 활성화하는 도구 설정
+            tools: [
+                { google_search: {} } 
+            ],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048
+            }
+        })
     });
-    return db;
-};
 
-// 3. 언어별 데이터베이스 미리 생성
-const databases = {
-    KO: parseTarotData(rawData_KO),
-    EN: parseTarotData(rawData_EN),
-    TW: parseTarotData(rawData_TW)
-};
-
-// 4. 현재 선택된 언어 상태 (기본값: 한국어)
-let currentLang = 'KO';
-
-// 5. [핵심] 이미지와 텍스트를 동시에 화면에 뿌려주는 최종 공정
-export const displayOracle = (cardID) => {
-    // 현재 선택된 언어팩에서 해당 카드의 데이터를 가져옴
-    const data = databases[currentLang][cardID];
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API 에러 상세:", errorData);
+        throw new Error('API 호출 실패');
+    }
     
-    if (!data) {
-        console.error(`[Error] 마스터, ${cardID} 데이터를 찾을 수 없습니다.`);
-        return;
-    }
-
-    // A. 이미지 출력 (마스터의 .jpg 통일 규격 반영)
-    const imgContainer = document.getElementById('oracle-card-img');
-    if (imgContainer) {
-        imgContainer.src = `./images/cards/${cardID}.jpg`;
-        imgContainer.alt = data.tags;
-    }
-
-    // B. 해시태그 및 점사 텍스트 출력 (HTML의 ID와 일치해야 함)
-    document.getElementById('display-hashtags').innerText = data.tags;
-    document.getElementById('text-past').innerText = data.content.past;
-    document.getElementById('text-present').innerText = data.content.present;
-    document.getElementById('text-future').innerText = data.content.future;
+    const data = await response.json();
     
-    console.log(`[System] ${cardID}.jpg 이미지와 ${currentLang} 점사 결합 완료.`);
-};
-
-// 6. 언어 전환 스위치 (필요 시 외부에서 호출)
-window.changeLanguage = (lang) => {
-    if (databases[lang]) {
-        currentLang = lang;
-        console.log(`[System] 언어팩이 ${lang}로 변경되었습니다.`);
-    }
-};
+    // Gemini 1.5 Flash 모델의 응답 구조에 맞춰 텍스트 추출
+    return data.candidates[0].content.parts[0].text;
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ORACLE TAROT - REALTIME</title>
+<style>
+    :root { --gold: #D4AF37; --bg: #0a0a0a; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: #fff; font-family: sans-serif; min-height: 100vh; display: flex; justify-content: center; }
+    
+    #app-container { max-width: 500px; width: 100%; padding: 40px 20px; border-left: 1px solid #222; border-right: 1px solid #222; position: relative; }
+
+    /* 타이틀: 깔끔한 중앙 정렬 */
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 { color: var(--gold); font-size: 2rem; letter-spacing: 5px; margin-bottom: 5px; text-shadow: 0 0 10px rgba(212,175,55,0.5); }
+    .header p { color: var(--gold); font-size: 0.8rem; opacity: 0.7; letter-spacing: 2px; }
+
+    /* 입력창: 비벨 보더 간소화 */
+    .input-wrap { position: relative; width: 100%; padding: 3px; background: linear-gradient(145deg, #FFF5C3, #D4AF37); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); margin-bottom: 30px; }
+    .input-inner { background: #111; clip-path: inherit; padding: 15px; }
+    textarea { width: 100%; background: transparent; border: none; color: #fff; font-size: 1rem; text-align: center; outline: none; height: 60px; resize: none; font-weight: bold; }
+
+    /* 카드 구역: 3장 가로 배치 */
+    .card-grid { display: flex; gap: 10px; margin-bottom: 30px; }
+    .card-slot { flex: 1; aspect-ratio: 2/3; background: #1a1a1a; border: 1px solid #333; border-radius: 5px; overflow: hidden; }
+    .card-slot img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* 버튼 및 효과 */
+    .action-btn { width: 100%; padding: 18px; background: linear-gradient(to bottom, #FFF5C3, #D4AF37); border: none; border-radius: 50px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
+    .action-btn:active { transform: scale(0.98); }
+    
+    /* 결과 화면 */
+    #result-view { display: none; flex-direction: column; width: 100%; }
+    .res-cards { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+    .res-card { width: 30%; aspect-ratio: 2/3; border: 2px solid var(--gold); border-radius: 5px; object-fit: cover; }
+    #ai-box { background: #000; border: 1px solid var(--gold); border-radius: 10px; padding: 20px; line-height: 1.8; font-size: 0.95rem; min-height: 200px; }
+    .cursor { display: inline-block; width: 2px; height: 1em; background: var(--gold); animation: blink 0.8s infinite; vertical-align: middle; }
+    @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="home-view">
+        <div class="header">
+            <h1>ORACLE TAROT</h1>
+            <p>REAL-TIME DESTINY INSIGHT</p>
+        </div>
+
+        <div class="input-wrap">
+            <div class="input-inner">
+                <textarea id="user-q" placeholder="질문을 입력하세요 (예: 삼성전자 주가 전망)"></textarea>
+            </div>
+        </div>
+
+        <div class="card-grid">
+            <div class="card-slot"><img id="c1" src=""></div>
+            <div class="card-slot"><img id="c2" src=""></div>
+            <div class="card-slot"><img id="c3" src=""></div>
+        </div>
+
+        <button class="action-btn" onclick="startReading()">운명의 신탁 확인</button>
+    </div>
+
+    <div id="result-view">
+        <div class="res-cards" id="res-cards-wrap"></div>
+        <div id="ai-box"></div>
+        <button onclick="location.reload()" style="margin-top:20px; background:none; border:1px solid var(--gold); color:var(--gold); padding:10px; border-radius:20px; width:100%; cursor:pointer;">다시 하기</button>
+    </div>
+</div>
+
+<script>
+const API_KEY = "AIzaSyA1l1pt2Cr6vl-c6dkdaAfp_SblSyfCVC0";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+// 이미지 경로 (파트너님 폴더 구조에 맞춤)
+const getImg = (idx) => `./images/cards/m${String(idx % 78).padStart(2, '0')}.jpg`;
+
+// 초기 카드 랜덤 표시
+window.onload = () => {
+    [1,2,3].forEach(i => document.getElementById('c'+i).src = getImg(Math.floor(Math.random()*78)));
+};
+
+async function startReading() {
+    const q = document.getElementById('user-q').value.trim();
+    if(!q) return alert("질문을 입력해 주세요.");
+
+    const deck = [Math.floor(Math.random()*78), Math.floor(Math.random()*78), Math.floor(Math.random()*78)];
+    
+    // 화면 전환
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('result-view').style.display = 'flex';
+    
+    // 선택된 카드 표시
+    document.getElementById('res-cards-wrap').innerHTML = deck.map(i => `<img class="res-card" src="${getImg(i)}">`).join('');
+    
+    // AI 호출
+    await askGemini(deck, q);
+}
+
+async function askGemini(deck, q) {
+    const box = document.getElementById('ai-box');
+    box.innerHTML = `<p style="color:var(--gold); text-align:center;">실시간 데이터를 검색하며 운명을 읽는 중...</p>`;
+
+    const prompt = `당신은 실시간 주가, 뉴스, 경제 지표를 검색하여 답변하는 '오라클 제니스'입니다. 반드시 Google Search를 사용해 2026년 4월의 실제 상황을 반영하세요. 질문: ${q} / 카드 인덱스: ${deck.join(',')}`;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                contents: [{parts: [{text: prompt}]}],
+                tools: [{ google_search: {} }], // 실시간 검색 활성화
+                generationConfig: { temperature: 0.7, maxOutputTokens: 1000 }
+            })
+        });
+        const data = await response.json();
+        const text = data.candidates[0].content.parts[0].text;
+        box.innerHTML = '';
+        typewriter(box, text);
+    } catch (e) {
+        box.innerHTML = "운명의 연결이 불안정합니다. 다시 시도해 주세요.";
+    }
+}
+
+function typewriter(el, text) {
+    let i = 0;
+    const cur = document.createElement('span'); cur.className = 'cursor';
+    el.appendChild(cur);
+    const tick = () => {
+        if (i < text.length) { cur.before(text.charAt(i++)); setTimeout(tick, 20); }
+        else cur.remove();
+    };
+    tick();
+}
+</script>
+</body>
+</html>
