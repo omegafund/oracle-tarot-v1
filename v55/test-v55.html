@@ -51,7 +51,12 @@ h2 { color: #b08d3a; font-size: 16px; margin: 20px 0 8px; }
     margin-right: 8px;
     margin-bottom: 8px;
 }
-.btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+.btn:disabled { 
+    background: #2c3447 !important; 
+    color: #555 !important; 
+    cursor: not-allowed !important; 
+    opacity: 0.5;
+}
 .btn.secondary { background: #5a7191; color: #fff; }
 .btn.danger { background: #c44; color: #fff; }
 
@@ -129,7 +134,6 @@ table td:nth-child(2) { color: #d4d4d4; font-family: ui-monospace, monospace; wo
             <option value="love">love (연애)</option>
             <option value="stock">stock (주식)</option>
             <option value="crypto">crypto (암호화폐)</option>
-            <option value="realestate">realestate (부동산)</option>
             <option value="general">general (일반)</option>
         </select>
     </div>
@@ -290,14 +294,23 @@ async function step2MockConfirm() {
             log(`  → ★ V55 confirm-payment 엔드포인트 정상 작동 ★`, 'ok');
             log(`  → ★ 토스 API 호출 정상 ★`, 'ok');
             log(`  → Phase 4에서 실제 결제 통합 시 정상 흐름`, 'info');
+            
+            // ★ V55.0 1순위 수정: Step 3 항상 활성화 (사장님 폴링 흐름 검증 가능) ★
+            document.getElementById('btn3').disabled = false;
         } else if (data.valid === true) {
             log(`✅ 정상 응답 (가능성 0 — 토스가 가짜 paymentKey 수락한 경우)`, 'ok');
             log(`  status: ${data.status}`, 'raw');
             log(`  → Step 3: Polling 가능`, 'info');
             document.getElementById('btn3').disabled = false;
+        } else {
+            // ★ V55.0 1순위 수정: 예상치 못한 응답 처리 ★
+            log(`⚠ 예상치 못한 응답 형식: ${JSON.stringify(data).substring(0, 200)}`, 'warn');
+            document.getElementById('btn3').disabled = false;
         }
     } catch (e) {
         log(`❌ Mock confirmPayment 실패: ${e.message}`, 'err');
+        // ★ V55.0 1순위 수정: 네트워크 오류여도 Step 3 활성화 (재시도 가능) ★
+        document.getElementById('btn3').disabled = false;
     }
 }
 
