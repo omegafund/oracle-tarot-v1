@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>결제 완료 — V55</title>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f1419;
+    color: #d4d4d4;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 16px;
+}
+.box {
+    background: #1a1f2e;
+    border: 1px solid #2c3447;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    max-width: 400px;
+}
+h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #2c3447;
+    border-top-color: #d4af37;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 16px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.msg { color: #8fa3c5; font-size: 13px; margin-top: 8px; }
+.err { color: #f87171; font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="box">
+    <h1>결제 검증 중...</h1>
+    <div class="spinner"></div>
+    <div class="msg" id="msg">잠시만 기다려 주세요</div>
+    <div class="err" id="err"></div>
+</div>
+
+<script src="V55PaymentContext.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+// success.html 단순화 패턴 (ChatGPT 추가 7)
+// ════════════════════════════════════════════════════════════
+//   • 결제 success 콜백 처리
+//   • V55 워커에 confirm-payment 호출
+//   • result-v55.html로 즉시 리다이렉트
+//   • ★ 이 페이지에 오래 머물지 않음 ★ (BFCache 안전)
+// ════════════════════════════════════════════════════════════
+
+(async function () {
+    try {
+        // 1. URL 파라미터 추출 (토스 success 콜백)
+        const urlParams = V55PaymentContext.readUrlParams();
+        
+        if (!urlParams.paymentKey || !urlParams.orderId || !urlParams.amount) {
+            throw new Error('토스 결제 파라미터 누락');
+        }
+        
+        // 2. readingId + signedAccessToken 복구
+        // 우선순위: URL hash > localStorage
+        let readingId = urlParams.readingId;
+        let signedAccessToken = urlParams.signedAccessToken;
+        
+        if (!readingId || !signedAccessToken) {
+            const last = V55PaymentContext.readLastPayment();
+            if (last) {
+                readingId = readingId || last.readingId;
+                signedAccessToken = signedAccessToken || last.signedAccessToken;
+            }
+        }
+        
+        if (!readingId || !signedAccessToken) {
+            throw new Error('readingId 또는 signedAccessToken 복구 실패 (localStorage + URL 모두 X)');
+        }
+        
+        document.getElementById('msg').textContent = '토스 결제 검증 중...';
+        
+        // 3. confirm-payment 호출
+        const confirmed = await V55PaymentContext.confirmPayment({
+            readingId,
+            paymentKey:        urlParams.paymentKey,
+            orderId:           urlParams.orderId,
+            amount:            urlParams.amount,
+            signedAccessToken
+        });
+        
+        if (!confirmed.valid) {
+            throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
+        }
+        
+        // 4. result 페이지로 ★ 즉시 ★ 리다이렉트 (BFCache 안전)
+        document.getElementById('msg').textContent = '결과 페이지로 이동 중...';
+        
+        // URL hash로 토큰 전달 (referrer 노출 X)
+        const resultUrl = `result-v55.html#rid=${encodeURIComponent(readingId)}&token=${encodeURIComponent(signedAccessToken)}`;
+        
+        // ★ replace로 이동 (뒤로가기 방지 — BFCache 안전) ★
+        window.location.replace(resultUrl);
+        
+    } catch (e) {
+        console.error('[V55 success]', e);
+        document.querySelector('.spinner').style.display = 'none';
+        document.getElementById('msg').textContent = '결제 검증 오류';
+        document.getElementById('err').textContent = e.message;
+    }
+})();
+</script>
+
+</body>
+</html>
