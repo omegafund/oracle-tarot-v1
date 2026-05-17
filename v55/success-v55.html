@@ -37,27 +37,42 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .msg { color: #8fa3c5; font-size: 13px; margin-top: 8px; }
 .err { color: #f87171; font-size: 12px; margin-top: 16px; }
+.retry-hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.5; }
+.retry-btn {
+    background: #d4af37;
+    color: #0f1419;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    margin-top: 10px;
+}
 </style>
 </head>
 <body>
 
 <div class="box">
     <h1>결제 검증 중...</h1>
-    <div class="spinner"></div>
+    <div class="spinner" id="spinner"></div>
     <div class="msg" id="msg">잠시만 기다려 주세요</div>
     <div class="err" id="err"></div>
+    <div class="retry-hint" id="retryHint" style="display:none"></div>
 </div>
 
 <script src="V55PaymentContext.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// success.html 단순화 패턴 (ChatGPT 추가 7)
+// success.html — V55.0 day4d-fix2 (ChatGPT #7 패치 적용)
 // ════════════════════════════════════════════════════════════
 //   • 결제 success 콜백 처리
-//   • V55 워커에 confirm-payment 호출
+//   • V55 워커에 confirm-payment 호출 (★ ChatGPT #7: 15초 timeout guard ★)
 //   • result-v55.html로 즉시 리다이렉트
 //   • ★ 이 페이지에 오래 머물지 않음 ★ (BFCache 안전)
 // ════════════════════════════════════════════════════════════
+
+const CONFIRM_TIMEOUT_MS = 15000;  // ★ ChatGPT #7: 15초 timeout ★
 
 (async function () {
     try {
@@ -69,7 +84,6 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
         }
         
         // 2. readingId + signedAccessToken 복구
-        // 우선순위: URL hash > localStorage
         let readingId = urlParams.readingId;
         let signedAccessToken = urlParams.signedAccessToken;
         
@@ -85,16 +99,26 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
             throw new Error('readingId 또는 signedAccessToken 복구 실패 (localStorage + URL 모두 X)');
         }
         
-        document.getElementById('msg').textContent = '토스 결제 검증 중...';
+        document.getElementById('msg').textContent = '결제 검증 중...';
         
-        // 3. confirm-payment 호출
-        const confirmed = await V55PaymentContext.confirmPayment({
-            readingId,
-            paymentKey:        urlParams.paymentKey,
-            orderId:           urlParams.orderId,
-            amount:            urlParams.amount,
-            signedAccessToken
-        });
+        // 3. ★ ChatGPT #7: confirm-payment를 15초 timeout으로 감싸기 ★
+        //   모바일 네트워크 흔들림 시 사용자 무한 대기 방지
+        //   timeout 시: 결제 확인 중 상태 유지 + 새로고침 안내
+        //   (워커 idempotency가 보장 — 새로고침해도 안전, status=READY/FETCHING이면 즉시 반환)
+        const confirmed = await Promise.race([
+            V55PaymentContext.confirmPayment({
+                readingId,
+                paymentKey:        urlParams.paymentKey,
+                orderId:           urlParams.orderId,
+                amount:            urlParams.amount,
+                signedAccessToken
+            }),
+            new Promise(function (_, reject) {
+                setTimeout(function () {
+                    reject(new Error('CONFIRM_TIMEOUT_15S'));
+                }, CONFIRM_TIMEOUT_MS);
+            })
+        ]);
         
         if (!confirmed.valid) {
             throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
@@ -103,17 +127,28 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
         // 4. result 페이지로 ★ 즉시 ★ 리다이렉트 (BFCache 안전)
         document.getElementById('msg').textContent = '결과 페이지로 이동 중...';
         
-        // URL hash로 토큰 전달 (referrer 노출 X)
-        const resultUrl = `result-v55.html#rid=${encodeURIComponent(readingId)}&token=${encodeURIComponent(signedAccessToken)}`;
+        const resultUrl = 'result-v55.html#rid=' + encodeURIComponent(readingId) + 
+                          '&token=' + encodeURIComponent(signedAccessToken);
         
-        // ★ replace로 이동 (뒤로가기 방지 — BFCache 안전) ★
         window.location.replace(resultUrl);
         
     } catch (e) {
         console.error('[V55 success]', e);
-        document.querySelector('.spinner').style.display = 'none';
-        document.getElementById('msg').textContent = '결제 검증 오류';
-        document.getElementById('err').textContent = e.message;
+        document.getElementById('spinner').style.display = 'none';
+        
+        // ★ ChatGPT #7: timeout 시 별도 처리 — 결제는 정상일 수 있음 ★
+        if (e.message === 'CONFIRM_TIMEOUT_15S') {
+            document.getElementById('msg').textContent = '결제 확인 지연';
+            document.getElementById('err').textContent = '15초 이내 응답이 없습니다.';
+            document.getElementById('retryHint').style.display = 'block';
+            document.getElementById('retryHint').innerHTML = 
+                '★ 결제는 정상 처리됐을 수 있습니다 ★<br>' +
+                '아래 버튼으로 새로고침하시면 결과를 확인할 수 있습니다.<br>' +
+                '<button class="retry-btn" onclick="window.location.reload()">새로고침</button>';
+        } else {
+            document.getElementById('msg').textContent = '결제 검증 오류';
+            document.getElementById('err').textContent = e.message;
+        }
     }
 })();
 </script>
