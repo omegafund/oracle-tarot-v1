@@ -22,12 +22,12 @@ body {
     border-radius: 8px;
     padding: 30px;
     text-align: center;
-    max-width: 400px;
+    max-width: 420px;
+    width: 100%;
 }
 h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
 .spinner {
-    width: 36px;
-    height: 36px;
+    width: 36px; height: 36px;
     border: 3px solid #2c3447;
     border-top-color: #d4af37;
     border-radius: 50%;
@@ -37,17 +37,31 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .msg { color: #8fa3c5; font-size: 13px; margin-top: 8px; }
 .err { color: #f87171; font-size: 12px; margin-top: 16px; }
-.retry-hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.5; }
+.redirect-hint {
+    color: #d4af37;
+    font-size: 12px;
+    margin-top: 12px;
+    line-height: 1.6;
+    padding: 10px;
+    background: #1f2638;
+    border-radius: 4px;
+}
+.btn-row { margin-top: 12px; }
 .retry-btn {
     background: #d4af37;
     color: #0f1419;
     border: none;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
-    font-size: 12px;
-    margin-top: 10px;
+    font-size: 13px;
+    margin: 0 4px;
+}
+.retry-btn.secondary {
+    background: transparent;
+    border: 1px solid #2c3447;
+    color: #8fa3c5;
 }
 </style>
 </head>
@@ -58,25 +72,33 @@ h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
     <div class="spinner" id="spinner"></div>
     <div class="msg" id="msg">잠시만 기다려 주세요</div>
     <div class="err" id="err"></div>
-    <div class="retry-hint" id="retryHint" style="display:none"></div>
+    <div class="redirect-hint" id="redirectHint" style="display:none"></div>
+    <div class="btn-row" id="btnRow" style="display:none">
+        <button class="retry-btn" onclick="goFailNow()">바로 안내 페이지로</button>
+        <button class="retry-btn secondary" onclick="cancelRedirect()">대기 취소</button>
+    </div>
 </div>
 
 <script src="V55PaymentContext.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// success.html — V55.0 day4d-fix2 (ChatGPT #7 패치 적용)
-// ════════════════════════════════════════════════════════════
-//   • 결제 success 콜백 처리
-//   • V55 워커에 confirm-payment 호출 (★ ChatGPT #7: 15초 timeout guard ★)
-//   • result-v55.html로 즉시 리다이렉트
-//   • ★ 이 페이지에 오래 머물지 않음 ★ (BFCache 안전)
+// success-v55.html — V55.0 day4d-fix4 (★ catch 시 fail 자동 이동 ★)
 // ════════════════════════════════════════════════════════════
 
-const CONFIRM_TIMEOUT_MS = 15000;  // ★ ChatGPT #7: 15초 timeout ★
+const CONFIRM_TIMEOUT_MS = 15000;
+const FAIL_REDIRECT_MS = 3000;
+
+let redirectTimer = null;
+let redirectCountdownTimer = null;
+let pendingFailUrl = null;
 
 (async function () {
+    // ★ fix4: catch 외부 접근 가능하도록 변수 위치 변경 ★
+    let readingId = null;
+    let signedAccessToken = null;
+    
     try {
-        // 1. URL 파라미터 추출 (토스 success 콜백)
+        // 1. URL 파라미터 추출
         const urlParams = V55PaymentContext.readUrlParams();
         
         if (!urlParams.paymentKey || !urlParams.orderId || !urlParams.amount) {
@@ -84,8 +106,8 @@ const CONFIRM_TIMEOUT_MS = 15000;  // ★ ChatGPT #7: 15초 timeout ★
         }
         
         // 2. readingId + signedAccessToken 복구
-        let readingId = urlParams.readingId;
-        let signedAccessToken = urlParams.signedAccessToken;
+        readingId = urlParams.readingId;
+        signedAccessToken = urlParams.signedAccessToken;
         
         if (!readingId || !signedAccessToken) {
             const last = V55PaymentContext.readLastPayment();
@@ -96,22 +118,19 @@ const CONFIRM_TIMEOUT_MS = 15000;  // ★ ChatGPT #7: 15초 timeout ★
         }
         
         if (!readingId || !signedAccessToken) {
-            throw new Error('readingId 또는 signedAccessToken 복구 실패 (localStorage + URL 모두 X)');
+            throw new Error('readingId 또는 signedAccessToken 복구 실패');
         }
         
         document.getElementById('msg').textContent = '결제 검증 중...';
         
-        // 3. ★ ChatGPT #7: confirm-payment를 15초 timeout으로 감싸기 ★
-        //   모바일 네트워크 흔들림 시 사용자 무한 대기 방지
-        //   timeout 시: 결제 확인 중 상태 유지 + 새로고침 안내
-        //   (워커 idempotency가 보장 — 새로고침해도 안전, status=READY/FETCHING이면 즉시 반환)
+        // 3. ★ ChatGPT #7: 15초 timeout guard ★
         const confirmed = await Promise.race([
             V55PaymentContext.confirmPayment({
-                readingId,
+                readingId: readingId,
                 paymentKey:        urlParams.paymentKey,
                 orderId:           urlParams.orderId,
                 amount:            urlParams.amount,
-                signedAccessToken
+                signedAccessToken: signedAccessToken
             }),
             new Promise(function (_, reject) {
                 setTimeout(function () {
@@ -124,33 +143,109 @@ const CONFIRM_TIMEOUT_MS = 15000;  // ★ ChatGPT #7: 15초 timeout ★
             throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
         }
         
-        // 4. result 페이지로 ★ 즉시 ★ 리다이렉트 (BFCache 안전)
+        // 4. result로 이동
         document.getElementById('msg').textContent = '결과 페이지로 이동 중...';
-        
-        const resultUrl = 'result-v55.html#rid=' + encodeURIComponent(readingId) + 
+        const resultUrl = 'result-v55.html#rid=' + encodeURIComponent(readingId) +
                           '&token=' + encodeURIComponent(signedAccessToken);
-        
         window.location.replace(resultUrl);
         
     } catch (e) {
         console.error('[V55 success]', e);
         document.getElementById('spinner').style.display = 'none';
         
-        // ★ ChatGPT #7: timeout 시 별도 처리 — 결제는 정상일 수 있음 ★
         if (e.message === 'CONFIRM_TIMEOUT_15S') {
+            // timeout — 결제는 정상일 수 있음. 새로고침 안내
             document.getElementById('msg').textContent = '결제 확인 지연';
             document.getElementById('err').textContent = '15초 이내 응답이 없습니다.';
-            document.getElementById('retryHint').style.display = 'block';
-            document.getElementById('retryHint').innerHTML = 
-                '★ 결제는 정상 처리됐을 수 있습니다 ★<br>' +
-                '아래 버튼으로 새로고침하시면 결과를 확인할 수 있습니다.<br>' +
-                '<button class="retry-btn" onclick="window.location.reload()">새로고침</button>';
+            showTimeoutHint(readingId);
         } else {
+            // ════════════════════════════════════════════════
+            // ★ fix4 보강 — 일반 에러 시 fail-v55.html로 자동 이동 ★
+            //   사용자가 success 페이지에 갇히지 않도록
+            //   3초 카운트다운 + 즉시 이동 버튼 + 취소 버튼
+            // ════════════════════════════════════════════════
             document.getElementById('msg').textContent = '결제 검증 오류';
             document.getElementById('err').textContent = e.message;
+            scheduleAutoRedirect(readingId, e.message);
         }
     }
 })();
+
+// ════════════════════════════════════════════════════════════
+// ★ fix4: 자동 fail-v55.html 이동 (3초 카운트다운) ★
+// ════════════════════════════════════════════════════════════
+function scheduleAutoRedirect(readingId, errorMessage) {
+    const safeRid = readingId || '';
+    const safeMsg = errorMessage || '결제 검증 실패';
+    
+    // 토스 fail URL 패턴 모방 — fail-v55.html이 classifyTossError로 분류 가능
+    pendingFailUrl = '/v55/fail-v55.html?code=' + encodeURIComponent('CONFIRM_FAILED') +
+                     '&message=' + encodeURIComponent(safeMsg) +
+                     (safeRid ? ('#rid=' + encodeURIComponent(safeRid)) : '');
+    
+    document.getElementById('redirectHint').style.display = 'block';
+    document.getElementById('btnRow').style.display = 'block';
+    
+    let remainSec = Math.floor(FAIL_REDIRECT_MS / 1000);
+    updateCountdown(remainSec);
+    
+    redirectCountdownTimer = setInterval(function () {
+        remainSec -= 1;
+        if (remainSec <= 0) {
+            clearInterval(redirectCountdownTimer);
+            return;
+        }
+        updateCountdown(remainSec);
+    }, 1000);
+    
+    redirectTimer = setTimeout(function () {
+        goFailNow();
+    }, FAIL_REDIRECT_MS);
+}
+
+function updateCountdown(sec) {
+    document.getElementById('redirectHint').innerHTML =
+        '★ ' + sec + '초 후 안내 페이지로 자동 이동 ★<br>' +
+        '<span style="color:#6ee7a3; font-size:11px">결제 정보는 안전하게 보존됩니다</span>';
+}
+
+function goFailNow() {
+    if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
+    if (redirectCountdownTimer) { clearInterval(redirectCountdownTimer); redirectCountdownTimer = null; }
+    
+    if (pendingFailUrl) {
+        window.location.replace(pendingFailUrl);
+    } else {
+        window.location.replace('/v55/fail-v55.html');
+    }
+}
+
+function cancelRedirect() {
+    if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
+    if (redirectCountdownTimer) { clearInterval(redirectCountdownTimer); redirectCountdownTimer = null; }
+    
+    document.getElementById('redirectHint').innerHTML =
+        '<span style="color:#8fa3c5">자동 이동 취소됨 — 수동 진행 시 위 버튼 사용</span>';
+    document.getElementById('btnRow').innerHTML =
+        '<button class="retry-btn" onclick="goFailNow()">안내 페이지로</button>' +
+        '<button class="retry-btn secondary" onclick="window.location.reload()">새로고침</button>';
+}
+
+// ════════════════════════════════════════════════════════════
+// timeout 시 안내 (기존 fix2 유지)
+// ════════════════════════════════════════════════════════════
+function showTimeoutHint(readingId) {
+    document.getElementById('redirectHint').style.display = 'block';
+    document.getElementById('redirectHint').innerHTML =
+        '★ 결제는 정상 처리됐을 수 있습니다 ★<br>' +
+        '아래 버튼으로 새로고침하시면 결과를 확인할 수 있습니다.';
+    
+    document.getElementById('btnRow').style.display = 'block';
+    document.getElementById('btnRow').innerHTML =
+        '<button class="retry-btn" onclick="window.location.reload()">새로고침</button>' +
+        '<button class="retry-btn secondary" onclick="window.location.replace(\'/v55/fail-v55.html?code=CONFIRM_TIMEOUT_15S' +
+        (readingId ? '#rid=' + encodeURIComponent(readingId) : '') + '\')">안내 페이지로</button>';
+}
 </script>
 
 </body>
