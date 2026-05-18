@@ -26,8 +26,7 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 }
 
 .spinner-large {
-    width: 50px;
-    height: 50px;
+    width: 50px; height: 50px;
     border: 4px solid #2c3447;
     border-top-color: #d4af37;
     border-radius: 50%;
@@ -36,17 +35,8 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.status-msg {
-    text-align: center;
-    color: #8fa3c5;
-    font-size: 14px;
-    margin: 12px 0;
-}
-.status-detail {
-    text-align: center;
-    color: #6b7280;
-    font-size: 12px;
-}
+.status-msg { text-align: center; color: #8fa3c5; font-size: 14px; margin: 12px 0; }
+.status-detail { text-align: center; color: #6b7280; font-size: 12px; }
 .elapsed-bar {
     margin: 16px auto 0;
     max-width: 280px;
@@ -56,20 +46,16 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
     overflow: hidden;
 }
 .elapsed-bar-fill {
-    height: 100%;
-    background: #d4af37;
-    width: 0%;
+    height: 100%; background: #d4af37; width: 0%;
     transition: width 0.5s linear;
 }
 
 .content-display {
-    font-size: 14px;
-    line-height: 1.8;
-    color: #d4d4d4;
-    white-space: pre-wrap;
-    padding: 4px;
+    font-size: 14px; line-height: 1.8;
+    color: #d4d4d4; white-space: pre-wrap; padding: 4px;
 }
 
+/* 일반 에러 (네트워크 등) */
 .error-box {
     background: #2a0a0a;
     border: 1px solid #c44;
@@ -81,6 +67,7 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 .error-box h3 { color: #f87171; margin-bottom: 8px; }
 .error-box .msg { color: #d4d4d4; font-size: 13px; line-height: 1.6; }
 
+/* ceiling */
 .ceiling-box {
     background: #1a2030;
     border: 1px solid #d4af37;
@@ -92,24 +79,79 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 .ceiling-box h3 { color: #d4af37; margin-bottom: 8px; }
 .ceiling-box .msg { color: #d4d4d4; font-size: 13px; line-height: 1.6; }
 
+/* ★ fix4 신규: FAILED 상태 전용 사용자 친화 UI ★ */
+.failed-box {
+    background: #1f2638;
+    border: 1px solid #d4af37;
+    color: #d4af37;
+    padding: 20px;
+    border-radius: 6px;
+    text-align: center;
+}
+.failed-box h3 { color: #d4af37; margin-bottom: 12px; font-size: 16px; }
+.failed-box .user-msg {
+    color: #d4d4d4;
+    font-size: 14px;
+    margin-bottom: 14px;
+    line-height: 1.7;
+    padding: 12px;
+    background: #0f1419;
+    border-radius: 4px;
+}
+.failed-box .info-box {
+    color: #6ee7a3;
+    font-size: 12px;
+    margin-bottom: 16px;
+    line-height: 1.8;
+    padding: 12px;
+    background: #0a2018;
+    border-radius: 4px;
+    border: 1px solid #1f3d2a;
+    text-align: left;
+}
+.failed-box .meta {
+    color: #6b7280;
+    font-size: 10px;
+    font-family: 'SF Mono', Monaco, monospace;
+    margin-bottom: 16px;
+}
+.failed-box .meta code { color: #8fa3c5; }
+
 .meta {
-    color: #8fa3c5;
-    font-size: 11px;
+    color: #8fa3c5; font-size: 11px;
     border-top: 1px solid #2c3447;
-    padding-top: 8px;
-    margin-top: 16px;
+    padding-top: 8px; margin-top: 16px;
 }
 
+/* ★ fix4: 큰 액션 버튼 + 명확한 출구 ★ */
 .action-btn {
     background: #d4af37;
     color: #0f1419;
     border: none;
-    padding: 10px 16px;
+    padding: 12px 20px;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
-    font-size: 13px;
-    margin-top: 12px;
+    font-size: 14px;
+    margin: 4px;
+    min-width: 140px;
+}
+.action-btn.secondary {
+    background: transparent;
+    border: 1px solid #d4af37;
+    color: #d4af37;
+}
+.action-btn.tertiary {
+    background: transparent;
+    border: 1px solid #2c3447;
+    color: #8fa3c5;
+}
+.btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
 }
 </style>
 </head>
@@ -120,32 +162,62 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 <h1>운명의 신탁</h1>
 <p class="subtitle">V55.0 · 점사 결과</p>
 
-<!-- 로딩 상태 -->
+<!-- 로딩 -->
 <div class="card" id="loadingCard">
     <div class="spinner-large"></div>
     <div class="status-msg" id="statusMsg">결과를 받아오는 중...</div>
     <div class="status-detail" id="statusDetail">상태: 시작</div>
-    <!-- ★ ChatGPT #10: 90초 진행 표시 ★ -->
     <div class="elapsed-bar"><div class="elapsed-bar-fill" id="elapsedBar"></div></div>
 </div>
 
-<!-- 결과 표시 -->
+<!-- 결과 -->
 <div class="card" id="resultCard" style="display:none">
     <h2 style="color: #d4af37; margin-bottom: 12px;" id="resultTitle">점사 결과</h2>
     <div class="content-display" id="contentDisplay"></div>
     <div class="meta" id="resultMeta"></div>
 </div>
 
-<!-- 일반 에러 -->
-<div class="card" id="errorCard" style="display:none">
-    <div class="error-box">
-        <h3>점사 결과 받기 실패</h3>
-        <div class="msg" id="errorMsg"></div>
-        <button class="action-btn" onclick="window.location.reload()">다시 시도</button>
+<!-- ★ fix4 신규: FAILED 상태 전용 카드 ★ -->
+<div class="card" id="failedCard" style="display:none">
+    <div class="failed-box">
+        <h3>점사 결과 생성 미완료</h3>
+        <div class="user-msg" id="failedUserMsg">
+            결과를 받아오지 못했습니다
+        </div>
+        
+        <div class="info-box">
+            ★ 안내 ★<br>
+            • 결제는 정상 완료되었으나, 결과 생성이 완료되지 못했습니다<br>
+            • ★ 영업 시 자동 환불 처리 ★ 됩니다 (sandbox는 실제 결제 X)<br>
+            • 같은 질문으로 ★ 다시 결제하시면 ★ 추가 비용 없이 결과 재시도 가능<br>
+            • 문의: support@zeustarot.com
+        </div>
+        
+        <div class="meta">
+            Reading ID: <code id="failedReadingId">—</code><br>
+            오류: <code id="failedReason">—</code>
+        </div>
+        
+        <div class="btn-row">
+            <button class="action-btn" onclick="goSandbox()">다시 결제 시도</button>
+            <button class="action-btn secondary" onclick="goHome()">처음으로</button>
+        </div>
     </div>
 </div>
 
-<!-- ★ ChatGPT #10: 90초 ceiling 도달 안내 ★ -->
+<!-- 일반 에러 (네트워크 등) -->
+<div class="card" id="errorCard" style="display:none">
+    <div class="error-box">
+        <h3>일시적 결함 발생</h3>
+        <div class="msg" id="errorMsg"></div>
+        <div class="btn-row">
+            <button class="action-btn" onclick="window.location.reload()">다시 시도</button>
+            <button class="action-btn tertiary" onclick="goHome()">처음으로</button>
+        </div>
+    </div>
+</div>
+
+<!-- ceiling -->
 <div class="card" id="ceilingCard" style="display:none">
     <div class="ceiling-box">
         <h3>결과 생성이 지연되고 있습니다</h3>
@@ -154,7 +226,10 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
             ★ 결과는 정상 생성될 수 있습니다 ★<br>
             잠시 후 아래 버튼을 눌러 결과를 확인해주세요.
         </div>
-        <button class="action-btn" onclick="window.location.reload()">결과 다시 확인</button>
+        <div class="btn-row">
+            <button class="action-btn" onclick="window.location.reload()">결과 다시 확인</button>
+            <button class="action-btn tertiary" onclick="goHome()">처음으로</button>
+        </div>
     </div>
 </div>
 
@@ -163,22 +238,16 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 <script src="V55PaymentContext.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// result-v55.html — V55.0 day4d-fix2 (ChatGPT #10 패치 적용)
-// ════════════════════════════════════════════════════════════
-//   • URL hash에서 readingId + token 읽기
-//   • V55PaymentContext.pollReading()로 결과 받기
-//   • status=READY 시 결과 표시
-//   • BFCache 복귀 시 자동 재 polling
-//   • ★ ChatGPT #10: 90초 polling ceiling ★
+// result-v55.html — V55.0 day4d-fix4 (★ FAILED 사용자 친화 UI ★)
 // ════════════════════════════════════════════════════════════
 
-const MAX_POLLING_MS = 90 * 1000;  // ★ ChatGPT #10: 90초 ceiling ★
+const MAX_POLLING_MS = 90 * 1000;
 
 let activePoller = null;
-let pollerInfo = null;     // {readingId, signedAccessToken}
-let pollStartAt = null;    // ★ ceiling 카운트 시작 시점 ★
-let progressTimer = null;  // ★ 진행 막대 업데이트 timer ★
-let ceilingTimer = null;   // ★ 90초 강제 종료 timer (네트워크 끊김 대비) ★
+let pollerInfo = null;
+let pollStartAt = null;
+let progressTimer = null;
+let ceilingTimer = null;
 
 // ════════════════════════════════════════════════════════════
 // 초기 진입
@@ -207,7 +276,7 @@ let ceilingTimer = null;   // ★ 90초 강제 종료 timer (네트워크 끊김
 })();
 
 // ════════════════════════════════════════════════════════════
-// Polling 시작 (★ ChatGPT #10 ceiling 포함 ★)
+// Polling 시작
 // ════════════════════════════════════════════════════════════
 function startPolling() {
     if (activePoller) {
@@ -215,19 +284,17 @@ function startPolling() {
     }
     cleanupTimers();
     
-    // ★ ChatGPT #10: ceiling 카운트 시작 시점 기록 ★
     pollStartAt = Date.now();
     
     document.getElementById('loadingCard').style.display = 'block';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
+    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
     document.getElementById('statusMsg').textContent = '결과를 받아오는 중...';
     document.getElementById('statusDetail').textContent = '상태: 시작';
     document.getElementById('elapsedBar').style.width = '0%';
     
-    // ★ ChatGPT #10: 진행 막대 + ceiling 강제 종료 timer ★
-    // 진행 막대는 500ms 마다 갱신, ceiling은 정확히 90초에 폴링 중단
     progressTimer = setInterval(updateProgressBar, 500);
     ceilingTimer = setTimeout(forceCeiling, MAX_POLLING_MS);
     
@@ -236,7 +303,6 @@ function startPolling() {
         signedAccessToken: pollerInfo.signedAccessToken,
         
         onUpdate: function (data) {
-            // ★ ChatGPT #10: onUpdate 시점에도 ceiling 체크 (이중 안전망) ★
             if (Date.now() - pollStartAt > MAX_POLLING_MS) {
                 forceCeiling();
                 return;
@@ -250,8 +316,8 @@ function startPolling() {
             }[data.status] || (data.status + ' 처리 중...');
             
             document.getElementById('statusMsg').textContent = statusText;
-            document.getElementById('statusDetail').textContent = 
-                '상태: ' + data.status + ' | 시도 ' + data.pollCount + '회 | ' + 
+            document.getElementById('statusDetail').textContent =
+                '상태: ' + data.status + ' | 시도 ' + data.pollCount + '회 | ' +
                 data.retryAfterSec + '초 후 재시도';
         },
         
@@ -262,14 +328,19 @@ function startPolling() {
         
         onFail: function (data) {
             cleanupTimers();
-            showError(data.message || data.error || '알 수 없는 오류');
+            
+            // ════════════════════════════════════════════════
+            // ★ fix4 보강 — status=failed 시 사용자 친화 UI ★
+            // ════════════════════════════════════════════════
+            if (data && data.status === 'failed') {
+                showFailedState(data);
+            } else {
+                showError(data && (data.message || data.error) || '알 수 없는 오류');
+            }
         }
     });
 }
 
-// ════════════════════════════════════════════════════════════
-// ★ ChatGPT #10: 진행 막대 업데이트 ★
-// ════════════════════════════════════════════════════════════
 function updateProgressBar() {
     if (!pollStartAt) return;
     const elapsed = Date.now() - pollStartAt;
@@ -277,9 +348,6 @@ function updateProgressBar() {
     document.getElementById('elapsedBar').style.width = pct + '%';
 }
 
-// ════════════════════════════════════════════════════════════
-// ★ ChatGPT #10: 90초 ceiling 도달 — 강제 종료 ★
-// ════════════════════════════════════════════════════════════
 function forceCeiling() {
     if (activePoller) {
         activePoller.abort();
@@ -290,21 +358,38 @@ function forceCeiling() {
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
+    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
     document.getElementById('ceilingCard').style.display = 'block';
 }
 
-// ════════════════════════════════════════════════════════════
-// Timer 청소 (★ ChatGPT #11: READY/FAILED/ceiling 시 즉시 정리 ★)
-// ════════════════════════════════════════════════════════════
 function cleanupTimers() {
-    if (progressTimer) {
-        clearInterval(progressTimer);
-        progressTimer = null;
-    }
-    if (ceilingTimer) {
-        clearTimeout(ceilingTimer);
-        ceilingTimer = null;
-    }
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    if (ceilingTimer)  { clearTimeout(ceilingTimer);   ceilingTimer = null; }
+}
+
+// ════════════════════════════════════════════════════════════
+// ★ fix4 신규: FAILED 상태 처리 — 사용자 갇힘 방지 ★
+// ════════════════════════════════════════════════════════════
+function showFailedState(data) {
+    // 1. ★ localStorage 청소 — FAILED readingId는 영원히 같은 결과만 ★
+    //    재시도 시 새 readingId 발급 받게 함 (idempotency는 24시간 후 자연 만료)
+    try {
+        V55PaymentContext.clearLastPayment();
+    } catch (e) { /* ignore */ }
+    
+    // 2. UI 전환
+    document.getElementById('loadingCard').style.display = 'none';
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('errorCard').style.display = 'none';
+    document.getElementById('ceilingCard').style.display = 'none';
+    document.getElementById('failedCard').style.display = 'block';
+    
+    // 3. 상세 채우기
+    const reason = (data && (data.error || data.message)) || '결과 생성 실패';
+    document.getElementById('failedUserMsg').textContent = 
+        '점사 결과를 받아오지 못했습니다. 잠시 후 다시 결제 시도해주세요.';
+    document.getElementById('failedReadingId').textContent = (data && data.readingId) || '—';
+    document.getElementById('failedReason').textContent = reason;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -314,6 +399,7 @@ function displayResult(data) {
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
+    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
     document.getElementById('resultCard').style.display = 'block';
     
     const titleMap = {
@@ -324,37 +410,49 @@ function displayResult(data) {
         general:    '일반 운세'
     };
     document.getElementById('resultTitle').textContent = titleMap[data.category] || '점사 결과';
-    
     document.getElementById('contentDisplay').textContent = data.content || '(빈 응답)';
     
     const completedAt = data.contentAt ? new Date(data.contentAt).toLocaleString('ko-KR') : '—';
     const charCount = data.content ? data.content.length : 0;
-    document.getElementById('resultMeta').innerHTML = 
-        '★ ' + data.category + ' / ' + data.feature + ' ★ · ' + 
+    document.getElementById('resultMeta').innerHTML =
+        '★ ' + data.category + ' / ' + data.feature + ' ★ · ' +
         charCount.toLocaleString() + '자 · 완료: ' + completedAt + '<br>' +
         'Reading ID: <code>' + data.readingId + '</code>';
 }
 
 // ════════════════════════════════════════════════════════════
-// 일반 에러 표시
+// 일반 에러
 // ════════════════════════════════════════════════════════════
 function showError(message) {
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
+    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
     document.getElementById('errorCard').style.display = 'block';
     document.getElementById('errorMsg').textContent = message;
 }
 
 // ════════════════════════════════════════════════════════════
-// ★ ChatGPT 추가 1: BFCache Recovery ★ — polling 자동 재시작
+// ★ fix4 신규: 명확한 출구 함수 ★
+// ════════════════════════════════════════════════════════════
+function goSandbox() {
+    // 영업 시 영업 페이지(index)로 변경
+    window.location.replace('/v55/toss-sandbox-v55.html');
+}
+
+function goHome() {
+    window.location.replace('/');
+}
+
+// ════════════════════════════════════════════════════════════
+// BFCache Recovery
 // ════════════════════════════════════════════════════════════
 window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
-        console.log('[V55 result] pageshow persisted — polling 재시작 (ceiling 리셋)');
+        console.log('[V55 result] pageshow persisted — polling 재시작');
         
         if (pollerInfo) {
-            startPolling();  // ★ ceiling 카운트 자동 리셋 ★
+            startPolling();
         } else {
             const urlParams = V55PaymentContext.readUrlParams();
             const last = V55PaymentContext.readLastPayment();
@@ -376,7 +474,6 @@ window.addEventListener('pageshow', function (event) {
     }
 });
 
-// 페이지 떠날 때 ★ 완전 정리 ★ (★ ChatGPT #6 + #11 ★)
 window.addEventListener('pagehide', function () {
     if (activePoller) {
         activePoller.abort();
