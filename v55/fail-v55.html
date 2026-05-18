@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>결제 실패 — V55</title>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f1419;
+    color: #d4d4d4;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 16px;
+}
+.box {
+    background: #1a1f2e;
+    border: 1px solid #2c3447;
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+}
+h1 { color: #f87171; font-size: 18px; margin-bottom: 8px; }
+.icon {
+    font-size: 36px;
+    color: #f87171;
+    margin: 8px 0 16px 0;
+}
+.msg { color: #d4d4d4; font-size: 14px; margin-bottom: 16px; line-height: 1.6; }
+.detail {
+    background: #0f1419;
+    border: 1px solid #2c3447;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    color: #8fa3c5;
+    text-align: left;
+    font-family: 'SF Mono', Monaco, monospace;
+    word-break: break-all;
+    line-height: 1.7;
+}
+.detail .label { color: #6b7280; }
+.detail .value { color: #d4d4d4; }
+.btn {
+    background: #d4af37;
+    color: #0f1419;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    margin: 0 4px;
+}
+.btn.secondary {
+    background: transparent;
+    border: 1px solid #2c3447;
+    color: #8fa3c5;
+}
+</style>
+</head>
+<body>
+
+<div class="box">
+    <div class="icon">×</div>
+    <h1>결제 실패</h1>
+    <div class="msg" id="msg">결제가 완료되지 않았습니다</div>
+    <div class="detail" id="detail"></div>
+    <button class="btn" onclick="goBack()">다시 시도</button>
+    <button class="btn secondary" onclick="goHome()">홈으로</button>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// fail-v55.html — V55.0 day4d-fix2 토스 결제 실패 콜백
+// ════════════════════════════════════════════════════════════
+//   토스가 결제 실패/취소 시 이 URL로 redirect
+//   쿼리: ?code=...&message=...&orderId=...
+//   hash:  #rid=... (sandbox 페이지가 추가)
+// ════════════════════════════════════════════════════════════
+
+(function () {
+    // 1. 토스 쿼리 파라미터
+    const search = new URLSearchParams(window.location.search);
+    const code = search.get('code');
+    const message = search.get('message');
+    const orderId = search.get('orderId');
+    
+    // 2. hash 파라미터 (sandbox/영업 페이지가 readingId 전달)
+    const hashStr = window.location.hash.startsWith('#') 
+        ? window.location.hash.substring(1) 
+        : window.location.hash;
+    const hash = new URLSearchParams(hashStr);
+    const readingId = hash.get('rid');
+    
+    // 3. UI 채우기
+    const msgEl = document.getElementById('msg');
+    const detailEl = document.getElementById('detail');
+    
+    // 메시지
+    if (message) {
+        msgEl.textContent = decodeURIComponent(message);
+    } else if (code) {
+        msgEl.textContent = '결제가 완료되지 않았습니다 (' + code + ')';
+    }
+    
+    // 상세
+    const lines = [];
+    if (code) lines.push('<span class="label">에러 코드:</span> <span class="value">' + code + '</span>');
+    if (message) lines.push('<span class="label">메시지:</span> <span class="value">' + decodeURIComponent(message) + '</span>');
+    if (orderId) lines.push('<span class="label">주문 ID:</span> <span class="value">' + orderId + '</span>');
+    if (readingId) lines.push('<span class="label">Reading ID:</span> <span class="value">' + readingId + '</span>');
+    
+    if (lines.length === 0) {
+        detailEl.innerHTML = '<span class="label">(상세 정보 없음 — 사용자가 결제창을 닫았을 가능성)</span>';
+    } else {
+        detailEl.innerHTML = lines.join('<br>');
+    }
+    
+    // ★ 보안 ★: 결제 실패 시 localStorage의 readingId/token은 그대로 유지
+    //   (사용자가 다시 시도할 수 있도록, 영업 페이지에서 활용 가능)
+    //   24시간 후 자동 만료 (V55PaymentContext.LS_TTL_MS)
+})();
+
+function goBack() {
+    // sandbox 페이지로 복귀 (영업 시점에는 영업 페이지로 변경)
+    window.location.replace('/v55/toss-sandbox-v55.html');
+}
+
+function goHome() {
+    window.location.replace('/');
+}
+</script>
+
+</body>
+</html>

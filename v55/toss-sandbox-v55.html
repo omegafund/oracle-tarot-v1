@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>V55 Sandbox 결제 검증</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f1419;
+    color: #d4d4d4;
+    line-height: 1.6;
+    padding: 16px;
+    min-height: 100vh;
+}
+.container { max-width: 600px; margin: 0 auto; }
+h1 { color: #d4af37; font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 12px; margin-bottom: 20px; }
+
+.card {
+    background: #1a1f2e;
+    border: 1px solid #2c3447;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.card h2 { color: #d4af37; font-size: 15px; margin-bottom: 12px; }
+
+label.field {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #8fa3c5;
+}
+label.field > span { display: block; margin-bottom: 4px; }
+
+select, textarea {
+    width: 100%;
+    background: #0f1419;
+    border: 1px solid #2c3447;
+    color: #d4d4d4;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+textarea { min-height: 70px; resize: vertical; }
+select:focus, textarea:focus { outline: 1px solid #d4af37; }
+
+.mode-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+.mode-row label {
+    flex: 1;
+    background: #0f1419;
+    border: 1px solid #2c3447;
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    color: #8fa3c5;
+}
+.mode-row label.active {
+    border-color: #d4af37;
+    background: #1f2638;
+    color: #d4af37;
+}
+.mode-row input { display: none; }
+
+.amount-box {
+    background: #0f1419;
+    border: 1px solid #2c3447;
+    border-radius: 4px;
+    padding: 12px;
+    text-align: center;
+    margin-bottom: 12px;
+}
+.amount-box .label { font-size: 11px; color: #6b7280; }
+.amount-box .value { font-size: 22px; color: #d4af37; font-weight: bold; }
+
+.btn {
+    background: #d4af37;
+    color: #0f1419;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    width: 100%;
+}
+.btn:disabled {
+    background: #5a7191 !important;
+    color: #b0b8c4 !important;
+    cursor: not-allowed !important;
+    opacity: 0.55;
+}
+
+.log {
+    background: #0a0e15;
+    border: 1px solid #2c3447;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 11px;
+    color: #8fa3c5;
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.log .ok  { color: #6ee7a3; }
+.log .err { color: #f87171; }
+.log .info { color: #d4af37; }
+
+.test-cards {
+    background: #0f1419;
+    border: 1px solid #2c3447;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 11px;
+    color: #8fa3c5;
+    line-height: 1.7;
+}
+.test-cards .pin { color: #d4af37; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>V55 Sandbox 결제 검증</h1>
+<p class="subtitle">Mock 모드 + Real 토스 Sandbox 모드 통합</p>
+
+<!-- ═══════════════════════════════════════════════════════════
+     1. 입력
+═══════════════════════════════════════════════════════════ -->
+<div class="card">
+    <h2>1. 입력</h2>
+    
+    <label class="field">
+        <span>카테고리</span>
+        <select id="category">
+            <option value="general">general (일반)</option>
+            <option value="saju">saju (사주)</option>
+            <option value="love">love (연애)</option>
+            <option value="stock">stock (주식)</option>
+            <option value="crypto">crypto (암호화폐)</option>
+        </select>
+    </label>
+    
+    <label class="field">
+        <span>Feature</span>
+        <select id="feature">
+            <option value="basic">basic — 990원</option>
+            <option value="premium">premium — 4,900원</option>
+        </select>
+    </label>
+    
+    <label class="field">
+        <span>질문 (1글자 이상)</span>
+        <textarea id="question" placeholder="예: 다음 달 운세는 어떤가요?">테스트 질문입니다</textarea>
+    </label>
+    
+    <div class="amount-box">
+        <div class="label">결제 금액</div>
+        <div class="value" id="amountDisplay">990원</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     2. 모드 선택
+═══════════════════════════════════════════════════════════ -->
+<div class="card">
+    <h2>2. 모드 선택</h2>
+    
+    <div class="mode-row">
+        <label id="modeMockLabel" class="active">
+            <input type="radio" name="mode" value="mock" checked>
+            <strong>Mock</strong><br>
+            <span style="font-size:10px">워커 API만 호출 (토스 진입 X)</span>
+        </label>
+        <label id="modeRealLabel">
+            <input type="radio" name="mode" value="real">
+            <strong>Real Sandbox</strong><br>
+            <span style="font-size:10px">실제 토스 sandbox 결제 진입</span>
+        </label>
+    </div>
+    
+    <button id="payBtn" class="btn">결제 시작</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3. 진행 로그
+═══════════════════════════════════════════════════════════ -->
+<div class="card">
+    <h2>3. 진행 로그</h2>
+    <div class="log" id="log">대기 중...</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     4. Sandbox 테스트 카드 (Real 모드 안내)
+═══════════════════════════════════════════════════════════ -->
+<div class="card" id="testCardCard" style="display:none">
+    <h2>4. Sandbox 테스트 카드 입력 안내</h2>
+    <div class="test-cards">
+        ★ 토스 Sandbox는 실제 결제 X — 입력값은 임의 가능 ★<br><br>
+        <span class="pin">카드 번호:</span> 4242 4242 4242 4242<br>
+        <span class="pin">만료일:</span>   12 / 99 (임의 미래)<br>
+        <span class="pin">CVC:</span>      123 (임의)<br>
+        <span class="pin">생년월일:</span>  940101 (임의)<br>
+        <span class="pin">비밀번호 앞 2자리:</span> 00<br><br>
+        다른 결제수단(카카오페이/네이버페이)도 sandbox 모드에서 작동
+    </div>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     스크립트
+═══════════════════════════════════════════════════════════ -->
+<script src="https://js.tosspayments.com/v1/payment"></script>
+<script src="V55PaymentContext.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+// toss-sandbox-v55.html — V55.0 day4d-fix2 Phase 4 Sandbox 검증
+// ════════════════════════════════════════════════════════════
+//   • Mock 모드:  V55PaymentContext.mockPayment 호출 (워커만)
+//   • Real 모드:  createReading → toss.requestPayment 진입
+//                 → success-v55.html 콜백 → result-v55.html polling
+// ════════════════════════════════════════════════════════════
+
+const TOSS_CLIENT_KEY = 'test_ck_DLJOpm5Qrld55o27nMJ0rPNdxbWn';
+
+const BASE_URL = location.origin + '/v55';
+const SUCCESS_URL = BASE_URL + '/success-v55.html';
+const FAIL_URL    = BASE_URL + '/fail-v55.html';
+
+// 가격 테이블 (워커 AMOUNT_TABLE과 동일)
+const AMOUNT_TABLE = {
+    saju:    { basic: 990, premium: 4900 },
+    love:    { basic: 990, premium: 4900 },
+    stock:   { basic: 990, premium: 4900 },
+    crypto:  { basic: 990, premium: 4900 },
+    general: { basic: 990, premium: 4900 }
+};
+
+const $ = function (id) { return document.getElementById(id); };
+
+// ════════════════════════════════════════════════════════════
+// UI: 금액 갱신
+// ════════════════════════════════════════════════════════════
+function updateAmount() {
+    const category = $('category').value;
+    const feature = $('feature').value;
+    const amount = AMOUNT_TABLE[category][feature];
+    $('amountDisplay').textContent = amount.toLocaleString() + '원';
+}
+$('category').addEventListener('change', updateAmount);
+$('feature').addEventListener('change', updateAmount);
+
+// ════════════════════════════════════════════════════════════
+// UI: 모드 토글
+// ════════════════════════════════════════════════════════════
+function updateMode() {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    $('modeMockLabel').classList.toggle('active', mode === 'mock');
+    $('modeRealLabel').classList.toggle('active', mode === 'real');
+    $('testCardCard').style.display = (mode === 'real') ? 'block' : 'none';
+    $('payBtn').textContent = (mode === 'mock') ? 'Mock 결제 실행' : '토스 결제 진입';
+}
+document.querySelectorAll('input[name="mode"]').forEach(function (el) {
+    el.addEventListener('change', updateMode);
+});
+updateMode();
+
+// ════════════════════════════════════════════════════════════
+// 로그 헬퍼
+// ════════════════════════════════════════════════════════════
+function log(msg, cls) {
+    const ts = new Date().toLocaleTimeString();
+    const el = $('log');
+    const span = document.createElement('span');
+    if (cls) span.className = cls;
+    span.textContent = '[' + ts + '] ' + msg + '\n';
+    el.appendChild(span);
+    el.scrollTop = el.scrollHeight;
+}
+
+function clearLog() {
+    $('log').innerHTML = '';
+}
+
+// ════════════════════════════════════════════════════════════
+// 결제 버튼 핸들러
+// ════════════════════════════════════════════════════════════
+$('payBtn').addEventListener('click', async function () {
+    clearLog();
+    
+    const category = $('category').value;
+    const feature = $('feature').value;
+    const question = $('question').value.trim();
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    
+    if (!question || question.length < 1) {
+        log('질문을 입력해주세요', 'err');
+        return;
+    }
+    
+    $('payBtn').disabled = true;
+    
+    try {
+        // ════════════════════════════════════════════
+        // 1. createReading (양쪽 모드 공통)
+        // ════════════════════════════════════════════
+        log('1. createReading 호출... (' + category + '/' + feature + ')', 'info');
+        
+        const created = await V55PaymentContext.createReading({
+            category: category,
+            feature: feature,
+            question: question
+        });
+        
+        log('createReading 성공: readingId=' + created.readingId, 'ok');
+        log('orderId=' + created.orderId + ' / amount=' + created.amount + '원', 'ok');
+        if (created.isDuplicate) {
+            log('★ idempotency: 기존 reading 반환 (중복 차단) ★', 'info');
+        }
+        
+        // ════════════════════════════════════════════
+        // 2. 모드별 분기
+        // ════════════════════════════════════════════
+        if (mode === 'mock') {
+            // ──────────────────────────────────────────
+            // Mock 모드: 가짜 paymentKey로 confirmPayment 호출
+            //   → 토스 거부 응답 기대 (★ 정상 흐름 검증 ★)
+            // ──────────────────────────────────────────
+            log('2. Mock confirmPayment 호출 (가짜 paymentKey)...', 'info');
+            
+            const confirmed = await V55PaymentContext.confirmPayment({
+                readingId:         created.readingId,
+                paymentKey:        'mock_pk_' + Date.now(),
+                orderId:           created.orderId,
+                amount:            created.amount,
+                signedAccessToken: created.signedAccessToken
+            });
+            
+            log('mock 응답:', 'info');
+            log(JSON.stringify(confirmed, null, 2));
+            
+            if (confirmed.valid) {
+                log('★ 예상치 못한 valid=true ★', 'err');
+            } else {
+                log('★ 정상 — 토스가 가짜 paymentKey 거부 ★', 'ok');
+            }
+            
+            $('payBtn').disabled = false;
+            
+        } else {
+            // ──────────────────────────────────────────
+            // Real 모드: 토스 sandbox 결제 진입
+            //   → 결제 완료 시 success-v55.html로 redirect
+            //   → V55PaymentContext.persistLastPayment가 이미
+            //     readingId + token을 localStorage에 저장함
+            //   → success.html은 hash + localStorage 둘 다 활용
+            // ──────────────────────────────────────────
+            log('2. 토스 sandbox 결제 진입...', 'info');
+            log('  successUrl: ' + SUCCESS_URL, 'info');
+            log('  failUrl:    ' + FAIL_URL, 'info');
+            
+            // ★ hash로 readingId + token 전달 (localStorage는 backup) ★
+            const successUrlWithHash = SUCCESS_URL + 
+                '#rid=' + encodeURIComponent(created.readingId) +
+                '&token=' + encodeURIComponent(created.signedAccessToken);
+            
+            const failUrlWithHash = FAIL_URL + 
+                '#rid=' + encodeURIComponent(created.readingId);
+            
+            const tossPayments = TossPayments(TOSS_CLIENT_KEY);
+            
+            const orderName = 'V55 ' + category + ' ' + feature;
+            
+            // ★ 토스 SDK 호출 — 결제 창 진입 ★
+            //   결제 완료 시 successUrl로 redirect (현재 페이지 떠남)
+            tossPayments.requestPayment('카드', {
+                amount:      created.amount,
+                orderId:     created.orderId,
+                orderName:   orderName,
+                successUrl:  successUrlWithHash,
+                failUrl:     failUrlWithHash
+            }).catch(function (e) {
+                // ★ 사용자가 결제창 닫음 또는 토스 오류 ★
+                log('토스 결제 진입 실패/취소: ' + e.message, 'err');
+                if (e.code) log('  토스 코드: ' + e.code, 'err');
+                $('payBtn').disabled = false;
+            });
+        }
+        
+    } catch (e) {
+        log('★ 오류 ★: ' + e.message, 'err');
+        console.error('[V55 sandbox]', e);
+        $('payBtn').disabled = false;
+    }
+});
+
+// ════════════════════════════════════════════════════════════
+// 초기 로그
+// ════════════════════════════════════════════════════════════
+log('V55 Sandbox 검증 페이지 로드 완료', 'info');
+log('워커: ' + V55PaymentContext.WORKER_URL, 'info');
+log('토스 클라이언트 키: ' + TOSS_CLIENT_KEY.substring(0, 11) + '...', 'info');
+log('Success URL: ' + SUCCESS_URL, 'info');
+log('Fail URL: ' + FAIL_URL, 'info');
+log('대기 중. 모드 선택 후 결제 시작 버튼을 누르세요.', 'info');
+</script>
+
+</body>
+</html>
