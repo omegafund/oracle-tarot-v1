@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════════════
 // 
 // 사장님 검증 환경:
-//   • Worker: https://tarot-api-v55.omegafund01.workers.dev
+//   • Worker: https://tarot-api-merged.omegafund01.workers.dev
 //   • Page:   https://oracle-tarot-v1.omegafund01.workers.dev/v55/
 //
 // ChatGPT 추가 권고 적용:
@@ -27,7 +27,7 @@
     // 상수
     // ════════════════════════════════════════════════════════════
     const V55_VERSION = 'V202.55.0-phase3-cgpt';
-    const WORKER_URL = 'https://tarot-api-v55.omegafund01.workers.dev';
+    const WORKER_URL = 'https://tarot-api-merged.omegafund01.workers.dev';
     
     // localStorage 키
     const LS_KEY_READING_ID = 'v55_last_reading_id';
