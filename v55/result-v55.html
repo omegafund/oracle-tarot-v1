@@ -327,6 +327,49 @@ function startStreaming() {
                 return;
             }
             
+            // ★ retryable 응답 — Gemini 일시 혼잡 (워커가 503 받고 SSE retryable 응답) ★
+            //   사장님 4일 전 통찰: 503 = TEMPORARY (FAILED 아님)
+            //   자동 재시도로 사용자 영향 최소화
+            if (data.retryable) {
+                console.warn('[V55-Stream] retryable 응답 — 자동 재시도 예정:', data.message);
+                
+                cleanupTimers();
+                try { activeStream.close(); } catch (e) {}
+                activeStream = null;
+                
+                // 사용자에게 표시
+                document.getElementById('statusMsg').textContent = '⏳ Gemini AI 서버 혼잡';
+                document.getElementById('statusDetail').textContent = 
+                    (data.message || 'Gemini busy') + ' — 5초 후 자동 재시도';
+                
+                // 재시도 카운트 (글로벌)
+                if (typeof window._v55_retry_count === 'undefined') {
+                    window._v55_retry_count = 0;
+                }
+                window._v55_retry_count++;
+                
+                // 최대 3회 재시도
+                if (window._v55_retry_count > 3) {
+                    console.error('[V55-Stream] 재시도 3회 초과 — fallback');
+                    document.getElementById('statusMsg').textContent = '⚠ Gemini AI 서버 지속 혼잡';
+                    document.getElementById('statusDetail').textContent = 
+                        '잠시 후 다시 시도 — KV에서 결과 확인 중';
+                    fallbackToFetchReading('Gemini 재시도 한도 초과 (3회)');
+                    return;
+                }
+                
+                // 5초 후 재시도
+                setTimeout(function () {
+                    accumulated = '';
+                    receivedAnyChunk = false;
+                    streamStartAt = Date.now();
+                    console.log('[V55-Stream] 자동 재시도 시작 (' + window._v55_retry_count + '/3)');
+                    startStreaming();
+                }, 5000);
+                
+                return;
+            }
+            
             // 완료 신호
             if (data.done) {
                 cleanupTimers();
