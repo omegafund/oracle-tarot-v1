@@ -160,7 +160,7 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 <div class="container">
 
 <h1>운명의 신탁</h1>
-<p class="subtitle">V55.0 · 점사 결과</p>
+<p class="subtitle">V55-LiveStream · 점사 결과</p>
 
 <!-- 로딩 -->
 <div class="card" id="loadingCard">
@@ -222,7 +222,7 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
     <div class="ceiling-box">
         <h3>결과 생성이 지연되고 있습니다</h3>
         <div class="msg">
-            점사 생성에 90초 이상 소요되고 있습니다.<br>
+            점사 생성에 180초 이상 소요되고 있습니다.<br>
             ★ 결과는 정상 생성될 수 있습니다 ★<br>
             잠시 후 아래 버튼을 눌러 결과를 확인해주세요.
         </div>
@@ -238,16 +238,23 @@ h1 { color: #d4af37; font-size: 22px; margin-bottom: 8px; }
 <script src="V55PaymentContext.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// result-v55.html — V55.0 day4d-fix4 (★ FAILED 사용자 친화 UI ★)
+// result-v55.html — V55-LiveStream (★ EventSource + SSE 스트림 ★)
+// ════════════════════════════════════════════════════════════
+//   V55 결제 lifecycle 보호 유지 + V54 SSE 스트림 시간 한도 해제
+//   polling 폐기 → EventSource 구독
+//   카카오페이 PREMIUM Gemini timeout 결함 해결
 // ════════════════════════════════════════════════════════════
 
-const MAX_POLLING_MS = 180 * 1000;
+const MAX_STREAM_MS = 180 * 1000;
+const API_BASE = 'https://tarot-api-v55.omegafund01.workers.dev';
 
-let activePoller = null;
-let pollerInfo = null;
-let pollStartAt = null;
+let activeStream = null;       // EventSource 인스턴스
+let pollerInfo = null;         // { readingId, signedAccessToken }
+let streamStartAt = null;      // 시작 시점
 let progressTimer = null;
 let ceilingTimer = null;
+let accumulated = '';          // 청크 누적
+let receivedAnyChunk = false;  // 첫 청크 도착 여부
 
 // ════════════════════════════════════════════════════════════
 // 초기 진입
@@ -272,105 +279,210 @@ let ceilingTimer = null;
     }
     
     pollerInfo = { readingId: readingId, signedAccessToken: signedAccessToken };
-    startPolling();
+    startStreaming();
 })();
 
 // ════════════════════════════════════════════════════════════
-// Polling 시작
+// SSE 스트림 시작 (★ V55-LiveStream ★)
 // ════════════════════════════════════════════════════════════
-function startPolling() {
-    if (activePoller) {
-        activePoller.abort();
+function startStreaming() {
+    if (activeStream) {
+        try { activeStream.close(); } catch (e) {}
+        activeStream = null;
     }
     cleanupTimers();
     
-    pollStartAt = Date.now();
+    streamStartAt = Date.now();
+    accumulated = '';
+    receivedAnyChunk = false;
     
     document.getElementById('loadingCard').style.display = 'block';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
-    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
-    document.getElementById('statusMsg').textContent = '결과를 받아오는 중...';
-    document.getElementById('statusDetail').textContent = '상태: 시작';
+    document.getElementById('failedCard').style.display = 'none';
+    document.getElementById('statusMsg').textContent = 'Gemini AI에 연결 중...';
+    document.getElementById('statusDetail').textContent = '상태: 연결';
     document.getElementById('elapsedBar').style.width = '0%';
     
     progressTimer = setInterval(updateProgressBar, 500);
-    ceilingTimer = setTimeout(forceCeiling, MAX_POLLING_MS);
+    ceilingTimer = setTimeout(forceCeiling, MAX_STREAM_MS);
     
-    activePoller = V55PaymentContext.pollReading({
-        readingId:         pollerInfo.readingId,
-        signedAccessToken: pollerInfo.signedAccessToken,
-        
-        onUpdate: function (data) {
-    if (Date.now() - pollStartAt > MAX_POLLING_MS) {
-        forceCeiling();
-        return;
-    }
+    const streamUrl = API_BASE + '/v55/stream-reading?rid=' + 
+        encodeURIComponent(pollerInfo.readingId) + 
+        '&token=' + encodeURIComponent(pollerInfo.signedAccessToken);
     
-    // ★ Patch 2.8: 시간 기반 메시지 분기 ★
-    //   60초 미만:  "Gemini AI가 점사 중..."
-    //   60~180초:   "혼잡 — 잠시만 더 기다려주세요"
-    //   ※ 180초 초과는 위 forceCeiling으로 이미 분기됨
-    const elapsedMs = Date.now() - pollStartAt;
-    const isFetching = (data.status === 'fetching' || data.status === 'consumed');
+    activeStream = new EventSource(streamUrl);
     
-    let statusText;
-    if (isFetching && elapsedMs > 60000) {
-        statusText = '⏳ 점사 생성 중 — Gemini 서버가 혼잡합니다. 조금만 더 기다려주세요...';
-    } else {
-        statusText = {
-            fetching:    'Gemini AI가 점사 중...',
-            paid:        '결제 완료, 결과 생성 준비 중...',
-            consumed:    '토큰 소비 완료, 결과 생성 중...',
-            confirming:  '결제 검증 중...'
-        }[data.status] || (data.status + ' 처리 중...');
-    }
-    
-    document.getElementById('statusMsg').textContent = statusText;
-    document.getElementById('statusDetail').textContent =
-        '상태: ' + data.status + ' | 시도 ' + data.pollCount + '회 | ' +
-        Math.round(elapsedMs / 1000) + '초 경과';
-},
-        
-        onComplete: function (data) {
-            cleanupTimers();
-            displayResult(data);
-        },
-        
-        onFail: function (data) {
-            cleanupTimers();
+    activeStream.onmessage = function (event) {
+        try {
+            const data = JSON.parse(event.data);
             
-            // ════════════════════════════════════════════════
-            // ★ fix4 보강 — status=failed 시 사용자 친화 UI ★
-            // ════════════════════════════════════════════════
-            if (data && data.status === 'failed') {
-                showFailedState(data);
-            } else {
-                showError(data && (data.message || data.error) || '알 수 없는 오류');
+            // 에러 신호
+            if (data.error) {
+                cleanupTimers();
+                try { activeStream.close(); } catch (e) {}
+                activeStream = null;
+                fallbackToFetchReading('Stream 에러: ' + data.error);
+                return;
             }
+            
+            // 완료 신호
+            if (data.done) {
+                cleanupTimers();
+                try { activeStream.close(); } catch (e) {}
+                activeStream = null;
+                
+                displayResult({
+                    content: accumulated,
+                    category: getCategoryFromUrl(),
+                    feature: 'premium',
+                    contentAt: Date.now(),
+                    readingId: pollerInfo.readingId,
+                    length: data.length
+                });
+                return;
+            }
+            
+            // 캐시된 결과 (재방문 시)
+            if (data.cached) {
+                cleanupTimers();
+                try { activeStream.close(); } catch (e) {}
+                activeStream = null;
+                
+                displayResult({
+                    content: data.text,
+                    category: getCategoryFromUrl(),
+                    feature: 'premium',
+                    contentAt: Date.now(),
+                    readingId: pollerInfo.readingId
+                });
+                return;
+            }
+            
+            // 청크 수신 (실시간 누적)
+            if (data.text) {
+                accumulated += data.text;
+                receivedAnyChunk = true;
+                
+                const elapsedMs = Date.now() - streamStartAt;
+                document.getElementById('statusMsg').textContent = 'Gemini AI가 점사 중...';
+                document.getElementById('statusDetail').textContent = 
+                    '수신: ' + accumulated.length.toLocaleString() + '자 | ' + 
+                    Math.round(elapsedMs / 1000) + '초 경과';
+            }
+        } catch (parseErr) {
+            console.error('[V55-Stream] parse error:', parseErr.message);
         }
-    });
+    };
+    
+    activeStream.onerror = function (err) {
+        console.error('[V55-Stream] onerror:', err);
+        cleanupTimers();
+        try { activeStream.close(); } catch (e) {}
+        activeStream = null;
+        
+        // 청크 일부 받은 상태에서 끊김 — 부분 결과 표시 (사용자 보호)
+        if (receivedAnyChunk && accumulated.length >= 200) {
+            displayResult({
+                content: accumulated,
+                category: getCategoryFromUrl(),
+                feature: 'premium',
+                contentAt: Date.now(),
+                readingId: pollerInfo.readingId,
+                partial: true
+            });
+            return;
+        }
+        
+        // 전혀 못 받은 경우 fetch-reading으로 fallback
+        fallbackToFetchReading('스트림 연결 끊김');
+    };
 }
 
+// ════════════════════════════════════════════════════════════
+// Fallback: fetch-reading으로 KV 결과 확인
+// ════════════════════════════════════════════════════════════
+function fallbackToFetchReading(reason) {
+    console.log('[V55-Stream] fallback to fetch-reading:', reason);
+    
+    const url = API_BASE + '/v55/fetch-reading?rid=' + 
+        encodeURIComponent(pollerInfo.readingId) + 
+        '&token=' + encodeURIComponent(pollerInfo.signedAccessToken) + 
+        '&poll=999';
+    
+    fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.status === 'ready' && data.content) {
+                displayResult({
+                    content: data.content,
+                    category: data.category || getCategoryFromUrl(),
+                    feature: data.feature || 'premium',
+                    contentAt: data.contentAt || Date.now(),
+                    readingId: pollerInfo.readingId
+                });
+                return;
+            }
+            
+            if (data.status === 'failed') {
+                showFailedState(data);
+                return;
+            }
+            
+            if (data.content && data.content.length >= 200) {
+                displayResult({
+                    content: data.content,
+                    category: data.category || getCategoryFromUrl(),
+                    feature: data.feature || 'premium',
+                    contentAt: data.contentAt || Date.now(),
+                    readingId: pollerInfo.readingId,
+                    partial: true
+                });
+                return;
+            }
+            
+            showError(reason + ' — KV에도 결과 없음');
+        })
+        .catch(function (err) {
+            showError(reason + ' — fallback도 실패: ' + err.message);
+        });
+}
+
+// ════════════════════════════════════════════════════════════
+// 진행 표시 업데이트
+// ════════════════════════════════════════════════════════════
 function updateProgressBar() {
-    if (!pollStartAt) return;
-    const elapsed = Date.now() - pollStartAt;
-    const pct = Math.min(100, (elapsed / MAX_POLLING_MS) * 100);
+    if (!streamStartAt) return;
+    const elapsed = Date.now() - streamStartAt;
+    const pct = Math.min(100, (elapsed / MAX_STREAM_MS) * 100);
     document.getElementById('elapsedBar').style.width = pct + '%';
 }
 
 function forceCeiling() {
-    if (activePoller) {
-        activePoller.abort();
-        activePoller = null;
+    if (activeStream) {
+        try { activeStream.close(); } catch (e) {}
+        activeStream = null;
     }
     cleanupTimers();
+    
+    // 부분 청크라도 받았으면 표시
+    if (receivedAnyChunk && accumulated.length >= 200) {
+        displayResult({
+            content: accumulated,
+            category: getCategoryFromUrl(),
+            feature: 'premium',
+            contentAt: Date.now(),
+            readingId: pollerInfo.readingId,
+            partial: true
+        });
+        return;
+    }
     
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
-    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
+    document.getElementById('failedCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'block';
 }
 
@@ -380,38 +492,46 @@ function cleanupTimers() {
 }
 
 // ════════════════════════════════════════════════════════════
-// ★ fix4 신규: FAILED 상태 처리 — 사용자 갇힘 방지 ★
+// URL에서 category 추출
+// ════════════════════════════════════════════════════════════
+function getCategoryFromUrl() {
+    try {
+        const urlParams = V55PaymentContext.readUrlParams();
+        return urlParams.category || 'saju';
+    } catch (e) {
+        return 'saju';
+    }
+}
+
+// ════════════════════════════════════════════════════════════
+// FAILED 상태 처리 (기존 fix4 그대로 유지)
 // ════════════════════════════════════════════════════════════
 function showFailedState(data) {
-    // 1. ★ localStorage 청소 — FAILED readingId는 영원히 같은 결과만 ★
-    //    재시도 시 새 readingId 발급 받게 함 (idempotency는 24시간 후 자연 만료)
     try {
         V55PaymentContext.clearLastPayment();
     } catch (e) { /* ignore */ }
     
-    // 2. UI 전환
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
     document.getElementById('failedCard').style.display = 'block';
     
-    // 3. 상세 채우기
     const reason = (data && (data.error || data.message)) || '결과 생성 실패';
     document.getElementById('failedUserMsg').textContent = 
         '점사 결과를 받아오지 못했습니다. 잠시 후 다시 결제 시도해주세요.';
-    document.getElementById('failedReadingId').textContent = (data && data.readingId) || '—';
+    document.getElementById('failedReadingId').textContent = (data && data.readingId) || (pollerInfo && pollerInfo.readingId) || '—';
     document.getElementById('failedReason').textContent = reason;
 }
 
 // ════════════════════════════════════════════════════════════
-// 결과 표시
+// 결과 표시 (기존 + partial 표시 추가)
 // ════════════════════════════════════════════════════════════
 function displayResult(data) {
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
-    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
+    document.getElementById('failedCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'block';
     
     const titleMap = {
@@ -421,34 +541,45 @@ function displayResult(data) {
         crypto:     '암호화폐 운세 분석',
         general:    '일반 운세'
     };
-    document.getElementById('resultTitle').textContent = titleMap[data.category] || '점사 결과';
+    
+    let titleText = titleMap[data.category] || '점사 결과';
+    if (data.partial) {
+        titleText += ' (부분 결과)';
+    }
+    document.getElementById('resultTitle').textContent = titleText;
     document.getElementById('contentDisplay').textContent = data.content || '(빈 응답)';
     
     const completedAt = data.contentAt ? new Date(data.contentAt).toLocaleString('ko-KR') : '—';
     const charCount = data.content ? data.content.length : 0;
-    document.getElementById('resultMeta').innerHTML =
-        '★ ' + data.category + ' / ' + data.feature + ' ★ · ' +
+    
+    let metaHtml = 
+        '★ ' + (data.category || 'saju') + ' / ' + (data.feature || 'premium') + ' ★ · ' +
         charCount.toLocaleString() + '자 · 완료: ' + completedAt + '<br>' +
-        'Reading ID: <code>' + data.readingId + '</code>';
+        'Reading ID: <code>' + (data.readingId || '—') + '</code>';
+    
+    if (data.partial) {
+        metaHtml += '<br><span style="color: #d4af37;">★ 스트림 중단으로 부분 결과 표시 — 완성된 결과는 같은 사주로 다시 시도 가능 ★</span>';
+    }
+    
+    document.getElementById('resultMeta').innerHTML = metaHtml;
 }
 
 // ════════════════════════════════════════════════════════════
-// 일반 에러
+// 일반 에러 (기존 그대로)
 // ════════════════════════════════════════════════════════════
 function showError(message) {
     document.getElementById('loadingCard').style.display = 'none';
     document.getElementById('resultCard').style.display = 'none';
     document.getElementById('ceilingCard').style.display = 'none';
-    document.getElementById('failedCard').style.display = 'none';  // ★ fix4 ★
+    document.getElementById('failedCard').style.display = 'none';
     document.getElementById('errorCard').style.display = 'block';
     document.getElementById('errorMsg').textContent = message;
 }
 
 // ════════════════════════════════════════════════════════════
-// ★ fix4 신규: 명확한 출구 함수 ★
+// 출구 함수 (기존 그대로)
 // ════════════════════════════════════════════════════════════
 function goSandbox() {
-    // 영업 시 영업 페이지(index)로 변경
     window.location.replace('/v55/toss-sandbox-v55.html');
 }
 
@@ -457,14 +588,14 @@ function goHome() {
 }
 
 // ════════════════════════════════════════════════════════════
-// BFCache Recovery
+// BFCache Recovery (기존 + EventSource 재시작)
 // ════════════════════════════════════════════════════════════
 window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
-        console.log('[V55 result] pageshow persisted — polling 재시작');
+        console.log('[V55 result] pageshow persisted — stream 재시작');
         
         if (pollerInfo) {
-            startPolling();
+            startStreaming();
         } else {
             const urlParams = V55PaymentContext.readUrlParams();
             const last = V55PaymentContext.readLastPayment();
@@ -474,21 +605,22 @@ window.addEventListener('pageshow', function (event) {
                     readingId: urlParams.readingId,
                     signedAccessToken: urlParams.signedAccessToken
                 };
-                startPolling();
+                startStreaming();
             } else if (last) {
                 pollerInfo = {
                     readingId: last.readingId,
                     signedAccessToken: last.signedAccessToken
                 };
-                startPolling();
+                startStreaming();
             }
         }
     }
 });
 
 window.addEventListener('pagehide', function () {
-    if (activePoller) {
-        activePoller.abort();
+    if (activeStream) {
+        try { activeStream.close(); } catch (e) {}
+        activeStream = null;
     }
     cleanupTimers();
 });
