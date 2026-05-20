@@ -303,23 +303,35 @@ function startPolling() {
         signedAccessToken: pollerInfo.signedAccessToken,
         
         onUpdate: function (data) {
-            if (Date.now() - pollStartAt > MAX_POLLING_MS) {
-                forceCeiling();
-                return;
-            }
-            
-            const statusText = {
-                fetching:    'Gemini AI가 점사 중...',
-                paid:        '결제 완료, 결과 생성 준비 중...',
-                consumed:    '토큰 소비 완료, 결과 생성 중...',
-                confirming:  '결제 검증 중...'
-            }[data.status] || (data.status + ' 처리 중...');
-            
-            document.getElementById('statusMsg').textContent = statusText;
-            document.getElementById('statusDetail').textContent =
-                '상태: ' + data.status + ' | 시도 ' + data.pollCount + '회 | ' +
-                data.retryAfterSec + '초 후 재시도';
-        },
+    if (Date.now() - pollStartAt > MAX_POLLING_MS) {
+        forceCeiling();
+        return;
+    }
+    
+    // ★ Patch 2.8: 시간 기반 메시지 분기 ★
+    //   60초 미만:  "Gemini AI가 점사 중..."
+    //   60~180초:   "혼잡 — 잠시만 더 기다려주세요"
+    //   ※ 180초 초과는 위 forceCeiling으로 이미 분기됨
+    const elapsedMs = Date.now() - pollStartAt;
+    const isFetching = (data.status === 'fetching' || data.status === 'consumed');
+    
+    let statusText;
+    if (isFetching && elapsedMs > 60000) {
+        statusText = '⏳ 점사 생성 중 — Gemini 서버가 혼잡합니다. 조금만 더 기다려주세요...';
+    } else {
+        statusText = {
+            fetching:    'Gemini AI가 점사 중...',
+            paid:        '결제 완료, 결과 생성 준비 중...',
+            consumed:    '토큰 소비 완료, 결과 생성 중...',
+            confirming:  '결제 검증 중...'
+        }[data.status] || (data.status + ' 처리 중...');
+    }
+    
+    document.getElementById('statusMsg').textContent = statusText;
+    document.getElementById('statusDetail').textContent =
+        '상태: ' + data.status + ' | 시도 ' + data.pollCount + '회 | ' +
+        Math.round(elapsedMs / 1000) + '초 경과';
+},
         
         onComplete: function (data) {
             cleanupTimers();
