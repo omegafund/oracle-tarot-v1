@@ -89,76 +89,38 @@ var V55_TO_V54_PLAN = {
         
         document.getElementById('msg').textContent = '점사 데이터 준비 중...';
         
-        var sajuInput = null;
         var category = 'saju';
-        
         try {
             var readingRes = await fetch(
                 WORKER_URL + '/v55/fetch-reading?rid=' + encodeURIComponent(readingId) + 
                 '&token=' + encodeURIComponent(signedAccessToken)
             );
             var readingData = await readingRes.json();
-            sajuInput = readingData.sajuInput || readingData.input || null;
-            category  = readingData.category || readingData.categoryHint || 'saju';
+            category = readingData.category || readingData.categoryHint || 'saju';
         } catch (fetchErr) {
             console.warn('[V55 success] fetch-reading 결함 (무시):', fetchErr.message);
         }
         
-        try {
-            localStorage.setItem('paid_token', 'V55_' + readingId);
-            localStorage.setItem('oracleSessionToken', signedAccessToken);
-            
-            if (category === 'saju') {
-                localStorage.setItem('sajuPaymentContext', 'true');
-                sessionStorage.setItem('sajuPaymentContext', 'true');
-            }
-            
-            var paidExpiresAt = Date.now() + (60 * 60 * 1000);
-            localStorage.setItem('sajuPaidExpiresAt', String(paidExpiresAt));
-            localStorage.setItem('verifiedAt', String(Date.now()));
-        } catch (e) {}
-        
-        if (sajuInput && sajuInput.year) {
-            try {
-                var v54Gender = (sajuInput.gender === 'female' || sajuInput.gender === '여' || sajuInput.gender === 'F') ? 'female' : 'male';
-                
-                var sajuPendingResult = {
-                    input: {
-                        year:     Number(sajuInput.year),
-                        month:    Number(sajuInput.month),
-                        day:      Number(sajuInput.day),
-                        hour:     (sajuInput.hour !== undefined && sajuInput.hour !== null && sajuInput.hour !== '') ? Number(sajuInput.hour) : null,
-                        minute:   Number(sajuInput.minute || 0),
-                        gender:   v54Gender,
-                        calendar: sajuInput.calendar === 'lunar' ? 'lunar' : 'solar',
-                        isLunar:  sajuInput.calendar === 'lunar' || !!sajuInput.isLunar
-                    },
-                    category:  category,
-                    timePhase: 'medium'
-                };
-                
-                localStorage.setItem('sajuPendingResult', JSON.stringify(sajuPendingResult));
-                sessionStorage.setItem('sajuPendingResult', JSON.stringify(sajuPendingResult));
-            } catch (e) {}
-        }
-        
         var v54Plan = V55_TO_V54_PLAN[v55plan] || 'saju_premium';
-        try {
-            localStorage.setItem('sajuPaidPlan', v54Plan);
-            sessionStorage.setItem('sajuPaidPlan', v54Plan);
-        } catch (e) {}
-        
-        document.getElementById('msg').textContent = '결제 완료 — 점사창으로 이동';
-        document.getElementById('spinner').style.display = 'none';
-        
         var v54Ctx = 'saju';
         if (category === 'love')    v54Ctx = 'love';
         if (category === 'stock')   v54Ctx = 'stock';
         if (category === 'crypto')  v54Ctx = 'crypto';
         if (category === 'general') v54Ctx = 'general';
         
-        var v54Url = ZEUSTAROT_HOME + '/?paid=ok&ctx=' + encodeURIComponent(v54Ctx) + 
-                     '&plan=' + encodeURIComponent(v54Plan) + 
+        document.getElementById('msg').textContent = '결제 완료 — 점사창으로 이동';
+        document.getElementById('spinner').style.display = 'none';
+        
+        // ★ V54 영업 URL — rid + token 포함 (★ 핵심 ★)
+        //   외부 자문 정확:
+        //   URL에 rid + token 포함해야 V54 영업의 v55TunnelTokenSync가 작동
+        //   도메인 분리 우회의 ★ 유일한 길 ★
+        var v54Url = ZEUSTAROT_HOME + '/' +
+                     '?paid=ok' +
+                     '&ctx=' + encodeURIComponent(v54Ctx) +
+                     '&plan=' + encodeURIComponent(v54Plan) +
+                     '&rid=' + encodeURIComponent(readingId) +
+                     '&token=' + encodeURIComponent(signedAccessToken) +
                      '&method=' + encodeURIComponent('토스페이');
         
         console.log('[V55 success] V54 영업 URL redirect:', v54Url);
