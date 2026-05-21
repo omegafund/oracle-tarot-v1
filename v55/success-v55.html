@@ -57,14 +57,6 @@ var V55_TO_V54_PLAN = {
         signedAccessToken = p.get('token');
         v55plan           = p.get('plan') || 'premium';
         
-        console.log('[V55 success] URL 파라미터:', {
-            paymentKey: paymentKey ? paymentKey.slice(0, 12) + '...' : null,
-            orderId: orderId,
-            amount: amount,
-            readingId: readingId,
-            v55plan: v55plan
-        });
-        
         if (!paymentKey || !orderId || !amount) {
             throw new Error('토스 결제 파라미터 누락');
         }
@@ -91,8 +83,6 @@ var V55_TO_V54_PLAN = {
             })
         ]);
         
-        console.log('[V55 success] confirm-payment 응답:', confirmed);
-        
         if (!confirmed.valid) {
             throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
         }
@@ -108,8 +98,6 @@ var V55_TO_V54_PLAN = {
                 '&token=' + encodeURIComponent(signedAccessToken)
             );
             var readingData = await readingRes.json();
-            console.log('[V55 success] fetch-reading:', readingData);
-            
             sajuInput = readingData.sajuInput || readingData.input || null;
             category  = readingData.category || readingData.categoryHint || 'saju';
         } catch (fetchErr) {
@@ -119,6 +107,15 @@ var V55_TO_V54_PLAN = {
         try {
             localStorage.setItem('paid_token', 'V55_' + readingId);
             localStorage.setItem('oracleSessionToken', signedAccessToken);
+            
+            if (category === 'saju') {
+                localStorage.setItem('sajuPaymentContext', 'true');
+                sessionStorage.setItem('sajuPaymentContext', 'true');
+            }
+            
+            var paidExpiresAt = Date.now() + (60 * 60 * 1000);
+            localStorage.setItem('sajuPaidExpiresAt', String(paidExpiresAt));
+            localStorage.setItem('verifiedAt', String(Date.now()));
         } catch (e) {}
         
         if (sajuInput && sajuInput.year) {
