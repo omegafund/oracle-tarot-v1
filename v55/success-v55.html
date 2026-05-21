@@ -1,302 +1,219 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>결제 완료 — V55</title>
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #0f1419;
-    color: #d4d4d4;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    padding: 16px;
-}
-.box {
-    background: #1a1f2e;
-    border: 1px solid #2c3447;
-    border-radius: 8px;
-    padding: 30px;
-    text-align: center;
-    max-width: 420px;
-    width: 100%;
-}
-h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
-.spinner {
-    width: 36px; height: 36px;
-    border: 3px solid #2c3447;
-    border-top-color: #d4af37;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 16px auto;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.msg { color: #8fa3c5; font-size: 13px; margin-top: 8px; }
-.err { color: #f87171; font-size: 12px; margin-top: 16px; }
-.redirect-hint {
-    color: #d4af37;
-    font-size: 12px;
-    margin-top: 12px;
-    line-height: 1.6;
-    padding: 10px;
-    background: #1f2638;
-    border-radius: 4px;
-}
-.btn-row { margin-top: 12px; }
-.retry-btn {
-    background: #d4af37;
-    color: #0f1419;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 13px;
-    margin: 0 4px;
-}
-.retry-btn.secondary {
-    background: transparent;
-    border: 1px solid #2c3447;
-    color: #8fa3c5;
-}
-</style>
-</head>
-<body>
-
-<div class="box">
-    <h1>결제 검증 중...</h1>
-    <div class="spinner" id="spinner"></div>
-    <div class="msg" id="msg">잠시만 기다려 주세요</div>
-    <div class="err" id="err"></div>
-    <div class="redirect-hint" id="redirectHint" style="display:none"></div>
-    <div class="btn-row" id="btnRow" style="display:none">
-        <button class="retry-btn" onclick="goFailNow()">바로 안내 페이지로</button>
-        <button class="retry-btn secondary" onclick="cancelRedirect()">대기 취소</button>
-    </div>
-</div>
-
-<script>
-// ════════════════════════════════════════════════════════════
-// success-v55.html — V55.0 도메인 격리 우회 patch
+// ════════════════════════════════════════════════════════════════════════
+// [V55-TUNNEL Phase 3] index.html — V55 결제 통과 후 V54 점사창 자동 진입
 //
-//   진짜 결함 (사장님 4일 전 진단):
-//     도메인 A (omegafund.github.io/oracle-tarot-pro): 결제 시작
-//     도메인 B (oracle-tarot-v1.../v55/success-v55.html): 결제 완료 도달
-//     → HTML5 Same-Origin Policy: localStorage 격리
-//     → V55PaymentContext.readLastPayment() 호출 시 null 반환
-//     → throw '복구 실패' → fail-v55 이동 (워커 로그 0)
+// 사장님 진단 (정확):
+//   V55 텍스트 점사창 (result-v55.html) = ★ 폐기 ★
+//   V54 영업 점사창 (renderSajuResult) = ★ 사용 ★
 //
-//   우회 (사장님 명령):
-//     1. URL Query Parameter 직접 추출 (URLSearchParams)
-//     2. V55PaymentContext 헬퍼 우회 (직접 fetch)
-//     3. localStorage fallback ★ 완전 제거 ★
-//     4. confirm-payment 워커 직접 호출
-// ════════════════════════════════════════════════════════════
+// 통로 개설 원리:
+//   1. success-v55.html이 V55 결제 검증 후
+//        zeustarot.com/?v55paid=1&plan=...&rid=...&token=...
+//        으로 redirect
+//   2. ★ 이 코드 ★ 가 진입 시 URL Parameter 감지
+//   3. 워커에 fetch-reading 호출 → sajuInput + 검증 통과 확인
+//   4. localStorage.setItem('sajuPaidPlan', plan)
+//   5. window._sajuInput = sajuInput
+//   6. fetch SAJU_API_AUTO/saju/oracle → renderSajuResult(data)
+//        = ★ 사장님 V54 카드 점사창 표시 ★
+//
+// 적용 위치:
+//   index.html 안의 <script> 영역 — 가능한 ★ 최상위 ★ (다른 V55 매개 검사 영역 위)
+//   권고: Line 3835 영역 (URLSearchParams 첫 등장 직전)
+// ════════════════════════════════════════════════════════════════════════
 
-const WORKER_URL = 'https://tarot-api-merged.omegafund01.workers.dev';
-const CONFIRM_TIMEOUT_MS = 15000;
-const FAIL_REDIRECT_MS = 3000;
+// ============================================================
+// V55-TUNNEL Phase 3: V55 결제 통과 후 V54 점사창 자동 진입
+// ============================================================
 
-let redirectTimer = null;
-let redirectCountdownTimer = null;
-let pendingFailUrl = null;
-
-(async function () {
-    let readingId = null;
-    let signedAccessToken = null;
+(function v55TunnelEntry() {
+    'use strict';
     
+    var V55_WORKER_URL = 'https://tarot-api-merged.omegafund01.workers.dev';
+    
+    // 1. URL Parameter 검사
+    var p = new URLSearchParams(window.location.search);
+    var v55paid = p.get('v55paid');
+    
+    if (v55paid !== '1') {
+        // V55 결제 매개 없음 — 정상 진입 (사주 입력 화면 표시)
+        return;
+    }
+    
+    var plan  = p.get('plan')  || 'saju_premium';
+    var rid   = p.get('rid')   || '';
+    var token = p.get('token') || '';
+    
+    if (!rid || !token) {
+        console.warn('[V55-TUNNEL] rid/token URL 누락 — 정상 진입');
+        return;
+    }
+    
+    console.log('[V55-TUNNEL] V55 결제 통과 감지:', { plan: plan, rid: rid });
+    
+    // 2. URL Parameter 정리 (사용자에게 깨끗한 URL 표시)
     try {
-        // ════════════════════════════════════════════════════
-        // 1. URL Query Parameter 직접 추출 (★ 도메인 격리 우회 ★)
-        // ════════════════════════════════════════════════════
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // 토스가 successUrl 뒤에 자동 추가하는 파라미터
-        const paymentKey = urlParams.get('paymentKey');
-        const orderId    = urlParams.get('orderId');
-        const amount     = urlParams.get('amount');
-        
-        // 도메인 A (omegafund.github.io)에서 부착한 파라미터
-        //   v55Query 영역: ?readingId=... &rid=... &token=... &plan=... &n=... &ctx=saju
-        readingId         = urlParams.get('rid') || urlParams.get('readingId');
-        signedAccessToken = urlParams.get('token');
-        
-        // ★ 진단 로그 ★
-        console.log('[V55 success] URL Parameter 추출 결과:', {
-            paymentKey:       paymentKey       ? paymentKey.slice(0, 12) + '...' : null,
-            orderId:          orderId,
-            amount:           amount,
-            readingId:        readingId,
-            token_length:     signedAccessToken ? signedAccessToken.length : 0,
-            token_first_8:    signedAccessToken ? signedAccessToken.slice(0, 8) : null,
-            full_url_length:  window.location.href.length
-        });
-        
-        // ════════════════════════════════════════════════════
-        // 2. 토스 결제 파라미터 검증
-        // ════════════════════════════════════════════════════
-        if (!paymentKey || !orderId || !amount) {
-            throw new Error('토스 결제 파라미터 누락 (paymentKey/orderId/amount)');
-        }
-        
-        // ════════════════════════════════════════════════════
-        // 3. 도메인 A 전달 파라미터 검증
-        //    ★ localStorage fallback ★ 완전 제거 ★ (도메인 격리로 무용지물)
-        // ════════════════════════════════════════════════════
-        if (!readingId || !signedAccessToken) {
-            throw new Error(
-                'readingId/signedAccessToken URL 누락 — ' +
-                '도메인 A successUrl이 query parameter로 부착하지 않은 결함'
-            );
-        }
-        
-        document.getElementById('msg').textContent = '결제 검증 중...';
-        
-        // ════════════════════════════════════════════════════
-        // 4. confirm-payment 워커 ★ 직접 호출 ★
-        //    V55PaymentContext 헬퍼 우회 (도메인 격리 영향 0)
-        // ════════════════════════════════════════════════════
-        console.log('[V55 success] confirm-payment 호출 시작:', `${WORKER_URL}/v55/confirm-payment`);
-        
-        const confirmed = await Promise.race([
-            fetch(`${WORKER_URL}/v55/confirm-payment`, {
+        var cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+    } catch (_) {}
+    
+    // 3. 로딩 화면 표시
+    var overlay = document.createElement('div');
+    overlay.id = 'v55TunnelOverlay';
+    overlay.style.cssText = 
+        'position:fixed;top:0;left:0;width:100vw;height:100vh;' +
+        'background:#0f1419;display:flex;flex-direction:column;' +
+        'align-items:center;justify-content:center;z-index:99999;' +
+        'font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#d4d4d4;';
+    overlay.innerHTML = 
+        '<div style="font-size:18px;color:#d4af37;margin-bottom:16px">★ 결제 완료 ★</div>' +
+        '<div style="font-size:14px;color:#8fa3c5;margin-bottom:16px">점사 데이터 가져오는 중...</div>' +
+        '<div style="width:36px;height:36px;border:3px solid #2c3447;' +
+        'border-top-color:#d4af37;border-radius:50%;' +
+        'animation:v55spin 1s linear infinite"></div>';
+    
+    var style = document.createElement('style');
+    style.textContent = '@keyframes v55spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+    document.body.appendChild(overlay);
+    
+    // 4. paidPlan localStorage 저장 (★ V54 renderSajuResult가 사용 ★)
+    try {
+        localStorage.setItem('sajuPaidPlan', plan);
+        localStorage.setItem('sajuPaidExpiresAt', String(Date.now() + 3600000));  // 1시간 유효
+        sessionStorage.setItem('sajuPaidPlan', plan);
+    } catch (e) {
+        console.warn('[V55-TUNNEL] localStorage 저장 결함:', e.message);
+    }
+    
+    // 5. 워커에서 reading 정보 가져오기 (sajuInput 추출)
+    fetch(V55_WORKER_URL + '/v55/fetch-reading?rid=' + encodeURIComponent(rid) + 
+          '&token=' + encodeURIComponent(token))
+        .then(function (r) { return r.json(); })
+        .then(function (readingData) {
+            console.log('[V55-TUNNEL] fetch-reading 응답:', readingData);
+            
+            if (!readingData.ok && !readingData.sajuInput && !readingData.input) {
+                throw new Error('Reading 정보 없음: ' + (readingData.error || 'unknown'));
+            }
+            
+            var sajuInput = readingData.sajuInput || readingData.input || {};
+            
+            if (!sajuInput.year || !sajuInput.month || !sajuInput.day) {
+                throw new Error('sajuInput 불완전');
+            }
+            
+            // 6. V54 영업 형식으로 변환
+            var v54SajuData = {
+                input: {
+                    year:        Number(sajuInput.year),
+                    month:       Number(sajuInput.month),
+                    day:         Number(sajuInput.day),
+                    hour:        Number(sajuInput.hour !== undefined && sajuInput.hour !== null ? sajuInput.hour : 12),
+                    calendar:    sajuInput.calendar === 'lunar' ? 'lunar' : 'solar',
+                    gender:      (sajuInput.gender === '여' || sajuInput.gender === 'female' || sajuInput.gender === 'F') ? 'female' : 'male',
+                    isLeapMonth: !!sajuInput.isLeapMonth
+                },
+                category: readingData.category || 'fortune',
+                timePhase: 'medium'
+            };
+            
+            // 7. window._sajuInput 저장 (★ V54 영업이 사용 ★)
+            window._sajuInput = v54SajuData;
+            
+            console.log('[V55-TUNNEL] V54 sajuInput 준비 완료, 점사 호출 중...');
+            
+            // 8. V54 워커 호출 — /saju/oracle
+            //   ★ 사장님 V54 영업 핵심 ★ — Line 5410 영역과 동일 호출
+            var SAJU_API = 'https://tarot-api.omegafund01.workers.dev';
+            
+            // tier 매핑
+            var tier = 'saju_basic';
+            if (plan === 'saju_premium') tier = 'saju_premium';
+            else if (plan === 'month' || plan === 'monthly') tier = 'month';
+            else if (plan === 'yearly' || plan === 'lifetime') tier = 'lifetime';
+            
+            return fetch(SAJU_API + '/saju/oracle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    readingId:         readingId,
-                    paymentKey:        paymentKey,
-                    orderId:           orderId,
-                    amount:            Number(amount),
-                    signedAccessToken: signedAccessToken
+                    input:     v54SajuData.input,
+                    category:  v54SajuData.category,
+                    timePhase: v54SajuData.timePhase,
+                    tier:      tier
                 })
-            }).then(function (res) {
-                console.log('[V55 success] HTTP 응답 status:', res.status);
-                return res.json();
-            }),
-            new Promise(function (_, reject) {
+            });
+        })
+        .then(function (r) { return r.text(); })
+        .then(function (txt) {
+            var data = JSON.parse(txt);
+            
+            if (!data.ok) {
+                throw new Error('V54 응답 결함: ' + (data.error || 'unknown'));
+            }
+            
+            console.log('[V55-TUNNEL] V54 점사 정상 응답 — renderSajuResult 호출');
+            
+            // 9. overlay 제거
+            var ov = document.getElementById('v55TunnelOverlay');
+            if (ov) ov.remove();
+            
+            // 10. ★ V54 점사창 표시 ★ — 사장님 영업 핵심 함수
+            if (typeof renderSajuResult === 'function') {
+                renderSajuResult(data);
+                console.log('[V55-TUNNEL] ✓ V54 카드 점사창 표시 완료');
+            } else {
+                // renderSajuResult가 아직 정의되지 않은 경우 — DOM 로드 대기
+                console.warn('[V55-TUNNEL] renderSajuResult 미정의 — 1초 대기 후 재시도');
                 setTimeout(function () {
-                    reject(new Error('CONFIRM_TIMEOUT_15S'));
-                }, CONFIRM_TIMEOUT_MS);
-            })
-        ]);
-        
-        console.log('[V55 success] confirm-payment 응답 본문:', confirmed);
-        
-        if (!confirmed.valid) {
-            throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
-        }
-        
-        // ════════════════════════════════════════════════════
-        // 5. result-v55.html로 이동
-        //    ★ Query Parameter 통일 ★ (사장님 명령 — hash 사용 안 함)
-        // ════════════════════════════════════════════════════
-        document.getElementById('msg').textContent = '결과 페이지로 이동 중...';
-        
-        const resultUrl = 'result-v55.html?rid=' + encodeURIComponent(readingId) +
-                          '&token=' + encodeURIComponent(signedAccessToken);
-        
-        console.log('[V55 success] result-v55.html로 이동:', resultUrl);
-        window.location.replace(resultUrl);
-        
-    } catch (e) {
-        console.error('[V55 success] 예외:', e);
-        document.getElementById('spinner').style.display = 'none';
-        
-        if (e.message === 'CONFIRM_TIMEOUT_15S') {
-            // timeout — 결제는 정상일 수 있음. 새로고침 안내
-            document.getElementById('msg').textContent = '결제 확인 지연';
-            document.getElementById('err').textContent = '15초 이내 응답이 없습니다.';
-            showTimeoutHint(readingId);
-        } else {
-            // 일반 예외 — fail-v55로 자동 이동
-            document.getElementById('msg').textContent = '결제 검증 오류';
-            document.getElementById('err').textContent = e.message;
-            scheduleAutoRedirect(readingId, e.message);
-        }
-    }
+                    if (typeof renderSajuResult === 'function') {
+                        renderSajuResult(data);
+                        console.log('[V55-TUNNEL] ✓ 재시도 후 V54 점사창 표시');
+                    } else {
+                        alert('점사창 함수 로드 결함 — 새로고침 또는 문의: support@zeustarot.com');
+                    }
+                }, 1000);
+            }
+        })
+        .catch(function (err) {
+            console.error('[V55-TUNNEL] 결함:', err);
+            
+            var ov = document.getElementById('v55TunnelOverlay');
+            if (ov) {
+                ov.innerHTML = 
+                    '<div style="font-size:16px;color:#f87171;margin-bottom:16px">★ 점사 데이터 가져오기 결함 ★</div>' +
+                    '<div style="font-size:13px;color:#8fa3c5;margin-bottom:24px;max-width:300px;text-align:center">' + 
+                    err.message + '</div>' +
+                    '<button onclick="window.location.reload()" style="background:#d4af37;color:#0f1419;border:none;' +
+                    'padding:10px 20px;border-radius:4px;cursor:pointer;font-weight:bold">새로고침</button>' +
+                    '<div style="margin-top:12px;font-size:12px;color:#6b7280">' +
+                    '결제는 정상 — 새로고침 후 다시 시도</div>';
+            }
+        });
 })();
 
-// ════════════════════════════════════════════════════════════
-// 자동 fail-v55.html 이동 (3초 카운트다운)
-// ════════════════════════════════════════════════════════════
-function scheduleAutoRedirect(readingId, errorMessage) {
-    const safeRid = readingId || '';
-    const safeMsg = errorMessage || '결제 검증 실패';
-    
-    // fail-v55.html이 classifyTossError로 분류 가능한 패턴
-    //   ★ Query Parameter 통일 ★ (사장님 명령)
-    pendingFailUrl = 'fail-v55.html?code=' + encodeURIComponent('CONFIRM_FAILED') +
-                     '&message=' + encodeURIComponent(safeMsg) +
-                     (safeRid ? ('&rid=' + encodeURIComponent(safeRid)) : '');
-    
-    document.getElementById('redirectHint').style.display = 'block';
-    document.getElementById('btnRow').style.display = 'block';
-    
-    let remainSec = Math.floor(FAIL_REDIRECT_MS / 1000);
-    updateCountdown(remainSec);
-    
-    redirectCountdownTimer = setInterval(function () {
-        remainSec -= 1;
-        if (remainSec <= 0) {
-            clearInterval(redirectCountdownTimer);
-            return;
-        }
-        updateCountdown(remainSec);
-    }, 1000);
-    
-    redirectTimer = setTimeout(function () {
-        goFailNow();
-    }, FAIL_REDIRECT_MS);
-}
+// ════════════════════════════════════════════════════════════════════════
+// [V55-TUNNEL Phase 4] 뒤로가기 차단 — 구구구 버전 유출 차단
+// ════════════════════════════════════════════════════════════════════════
+//   사장님 진단 (정확):
+//     뒤로가기 시 oracle-tarot-v1 구구구 버전 진입 → 사주창 X
+//   해결:
+//     history.pushState 1회 추가 → 뒤로가기 시 같은 페이지 유지
+//     또는 zeustarot.com 홈으로 강제 이동
 
-function updateCountdown(sec) {
-    document.getElementById('redirectHint').innerHTML =
-        '★ ' + sec + '초 후 안내 페이지로 자동 이동 ★<br>' +
-        '<span style="color:#6ee7a3; font-size:11px">결제 정보는 안전하게 보존됩니다</span>';
-}
-
-function goFailNow() {
-    if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
-    if (redirectCountdownTimer) { clearInterval(redirectCountdownTimer); redirectCountdownTimer = null; }
+(function v55BackGuard() {
+    'use strict';
     
-    if (pendingFailUrl) {
-        window.location.replace(pendingFailUrl);
-    } else {
-        window.location.replace('fail-v55.html');
-    }
-}
-
-function cancelRedirect() {
-    if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
-    if (redirectCountdownTimer) { clearInterval(redirectCountdownTimer); redirectCountdownTimer = null; }
+    // 진입 시 history에 현재 페이지 1회 더 push (뒤로가기 무력화)
+    try {
+        window.history.pushState({ v55_guard: 1 }, '', window.location.href);
+    } catch (_) {}
     
-    document.getElementById('redirectHint').innerHTML =
-        '<span style="color:#8fa3c5">자동 이동 취소됨 — 수동 진행 시 위 버튼 사용</span>';
-    document.getElementById('btnRow').innerHTML =
-        '<button class="retry-btn" onclick="goFailNow()">안내 페이지로</button>' +
-        '<button class="retry-btn secondary" onclick="window.location.reload()">새로고침</button>';
-}
-
-// ════════════════════════════════════════════════════════════
-// timeout 시 안내 (수동 새로고침)
-// ════════════════════════════════════════════════════════════
-function showTimeoutHint(readingId) {
-    document.getElementById('redirectHint').style.display = 'block';
-    document.getElementById('redirectHint').innerHTML =
-        '★ 결제는 정상 처리됐을 수 있습니다 ★<br>' +
-        '아래 버튼으로 새로고침하시면 결과를 확인할 수 있습니다.';
-    
-    document.getElementById('btnRow').style.display = 'block';
-    document.getElementById('btnRow').innerHTML =
-        '<button class="retry-btn" onclick="window.location.reload()">새로고침</button>' +
-        '<button class="retry-btn secondary" onclick="window.location.replace(\'fail-v55.html?code=CONFIRM_TIMEOUT_15S' +
-        (readingId ? '&rid=' + encodeURIComponent(readingId) : '') + '\')">안내 페이지로</button>';
-}
-</script>
-
-</body>
-</html>
+    window.addEventListener('popstate', function (event) {
+        // 뒤로가기 감지 → 다시 현재 페이지 push (구구구 버전 진입 차단)
+        try {
+            window.history.pushState({ v55_guard: 1 }, '', window.location.href);
+        } catch (_) {}
+        
+        console.log('[V55-TUNNEL] 뒤로가기 차단 — 현재 페이지 유지');
+    });
+})();
