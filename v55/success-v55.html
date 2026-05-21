@@ -35,11 +35,37 @@ var ZEUSTAROT_HOME = 'https://zeustarot.com';
 
 var V55_TO_V54_PLAN = {
     'entry':    'saju_basic',
-    'premium':  'saju_premium',
-    'month':    'month',
-    'year':     'yearly',
-    'lifetime': 'lifetime'
+    'premium':  'saju_premium'
 };
+
+// ★ readingId prefix → 카테고리 정확 추출 ★ (★ 결함 2 해결 ★)
+//   사장님 V55 워커가 readingId 발급 시 prefix 보유:
+//     sj_ → 사주 (saju)
+//     lv_ → 연애 (love)
+//     st_ → 주식 (stock)
+//     cr_ → 코인 (crypto)
+//     gn_ → 일반 (general)
+function detectCategoryFromReadingId(readingId) {
+    if (!readingId) return null;
+    var prefix = readingId.substring(0, 3);
+    if (prefix === 'sj_') return 'saju';
+    if (prefix === 'lv_') return 'love';
+    if (prefix === 'st_') return 'stock';
+    if (prefix === 'cr_') return 'crypto';
+    if (prefix === 'gn_') return 'general';
+    return null;
+}
+
+// ★ amount → plan 정확 매핑 ★ (★ 결함 1 해결 ★)
+//   사장님 가격 통일 정책:
+//     990원 → entry → saju_basic
+//     4,900원 → premium → saju_premium
+function detectPlanFromAmount(amount) {
+    var amt = Number(amount);
+    if (amt === 990)  return 'entry';
+    if (amt === 4900) return 'premium';
+    return null;
+}
 
 (async function () {
     var readingId = null;
@@ -55,7 +81,12 @@ var V55_TO_V54_PLAN = {
         
         readingId         = p.get('rid') || p.get('readingId');
         signedAccessToken = p.get('token');
-        v55plan           = p.get('plan') || 'premium';
+        
+        // ★ 결함 1 해결 ★: plan 매개 우선순위
+        //   1. URL plan 매개
+        //   2. amount → plan 매핑 (★ 결정적 안전망 ★)
+        //   3. fetch-reading 응답 (아래 try 블록)
+        v55plan = p.get('plan') || detectPlanFromAmount(amount);
         
         if (!paymentKey || !orderId || !amount) {
             throw new Error('토스 결제 파라미터 누락');
@@ -89,32 +120,52 @@ var V55_TO_V54_PLAN = {
         
         document.getElementById('msg').textContent = '점사 데이터 준비 중...';
         
-        var category = 'saju';
+        // ★ 결함 2 해결 ★: category 추출 우선순위
+        //   1. readingId prefix → 카테고리 (★ 결정적 ★ — V55 워커가 prefix 보유)
+        //   2. V55 워커 fetch-reading 응답 category
+        //   3. default 'saju' (마지막 폴백)
+        var category = detectCategoryFromReadingId(readingId);
+        
         try {
             var readingRes = await fetch(
                 WORKER_URL + '/v55/fetch-reading?rid=' + encodeURIComponent(readingId) + 
                 '&token=' + encodeURIComponent(signedAccessToken)
             );
             var readingData = await readingRes.json();
-            category = readingData.category || readingData.categoryHint || 'saju';
+            // fetch-reading 응답 우선 (있을 때만)
+            if (readingData.category)       category = readingData.category;
+            else if (readingData.categoryHint) category = readingData.categoryHint;
+            
+            // confirm-payment 응답에서 plan 보강
+            if (!v55plan && readingData.plan) v55plan = readingData.plan;
         } catch (fetchErr) {
             console.warn('[V55 success] fetch-reading 결함 (무시):', fetchErr.message);
         }
         
-        var v54Plan = V55_TO_V54_PLAN[v55plan] || 'saju_premium';
+        // ★ 최종 폴백 ★:
+        if (!v55plan)   v55plan = 'entry';    // 안전 폴백 (990 BASIC)
+        if (!category)  category = 'saju';    // 안전 폴백
+        
+        var v54Plan = V55_TO_V54_PLAN[v55plan] || 'saju_basic';
         var v54Ctx = 'saju';
         if (category === 'love')    v54Ctx = 'love';
         if (category === 'stock')   v54Ctx = 'stock';
         if (category === 'crypto')  v54Ctx = 'crypto';
         if (category === 'general') v54Ctx = 'general';
         
+        console.log('[V55 success] 최종 분기:', {
+            amount: amount,
+            v55plan: v55plan,
+            v54Plan: v54Plan,
+            category: category,
+            v54Ctx: v54Ctx,
+            readingId: readingId
+        });
+        
         document.getElementById('msg').textContent = '결제 완료 — 점사창으로 이동';
         document.getElementById('spinner').style.display = 'none';
         
-        // ★ V54 영업 URL — rid + token 포함 (★ 핵심 ★)
-        //   외부 자문 정확:
-        //   URL에 rid + token 포함해야 V54 영업의 v55TunnelTokenSync가 작동
-        //   도메인 분리 우회의 ★ 유일한 길 ★
+        // ★ V54 영업 URL — rid + token + plan + ctx 정확 매개 ★
         var v54Url = ZEUSTAROT_HOME + '/' +
                      '?paid=ok' +
                      '&ctx=' + encodeURIComponent(v54Ctx) +
