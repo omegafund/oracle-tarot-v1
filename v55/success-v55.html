@@ -40,9 +40,11 @@ var ZEUSTAROT_HOME = 'https://zeustarot.com';
 //   이유: V54가 plan=saju_* 보면 "사주 결제"로 오판 -> 카드 pendingOracle 삭제 -> 홈복귀
 // ============================================================================
 var V55_TO_V54_PLAN = {
-    'entry':    'saju_basic',
-    'premium':  'saju_premium'
-};
+        'entry':         'saju_basic',
+        'premium':       'saju_premium',
+        'saju_basic':    'saju_basic',
+        'saju_premium':  'saju_premium'
+    };
 
 // readingId prefix -> 카테고리 정확 추출
 //   sj_ -> 사주 / lv_ -> 연애 / st_ -> 주식 / cr_ -> 코인 / gn_ -> 일반
@@ -174,7 +176,7 @@ function detectPlanFromAmount(amount) {
         if (category === 'stock')   v54Ctx = 'stock';
         if (category === 'crypto')  v54Ctx = 'crypto';
         if (category === 'general') v54Ctx = 'general';
-alert('amount=' + amount + ' / v55plan=' + v55plan + ' / v54Plan=' + v54Plan + ' / category=' + category);
+
         console.log('[V55 success] 최종 분기:', {
             amount: amount,
             v55plan: v55plan,
