@@ -78,11 +78,11 @@ h1 { color: #f87171; font-size: 18px; margin-bottom: 8px; }
 
 <script>
 // ════════════════════════════════════════════════════════════
-// fail-v55.html — V55.0 day4d-fix2 토스 결제 실패 콜백
+// fail-v55.html — V55.0 결제 실패 콜백
 // ════════════════════════════════════════════════════════════
 //   토스가 결제 실패/취소 시 이 URL로 redirect
 //   쿼리: ?code=...&message=...&orderId=...
-//   hash:  #rid=... (sandbox 페이지가 추가)
+//   hash:  #rid=... (영업 페이지가 추가)
 // ════════════════════════════════════════════════════════════
 
 (function () {
@@ -92,7 +92,7 @@ h1 { color: #f87171; font-size: 18px; margin-bottom: 8px; }
     const message = search.get('message');
     const orderId = search.get('orderId');
     
-    // 2. hash 파라미터 (sandbox/영업 페이지가 readingId 전달)
+    // 2. hash 파라미터 (영업 페이지가 readingId 전달)
     const hashStr = window.location.hash.startsWith('#') 
         ? window.location.hash.substring(1) 
         : window.location.hash;
@@ -128,13 +128,15 @@ h1 { color: #f87171; font-size: 18px; margin-bottom: 8px; }
     //   24시간 후 자동 만료 (V55PaymentContext.LS_TTL_MS)
 })();
 
+// ★★★ [V55 영업 수정] 다시 시도·홈으로 → 영업 홈(zeustarot.com) ★★★
+//   기존 결함: goBack → 샌드박스(/v55/toss-sandbox-v55.html), goHome → '/' (옛 페이지)
+//   수정: 둘 다 영업 홈으로 → 옛 화면·샌드박스 노출 차단
 function goBack() {
-    // sandbox 페이지로 복귀 (영업 시점에는 영업 페이지로 변경)
-    window.location.replace('/v55/toss-sandbox-v55.html');
+    window.location.replace('https://zeustarot.com');
 }
 
 function goHome() {
-    window.location.replace('/');
+    window.location.replace('https://zeustarot.com');
 }
 </script>
 
