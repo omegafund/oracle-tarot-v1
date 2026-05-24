@@ -7,60 +7,38 @@
 <style>
 html, body { background: #0a0612 !important; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; }
-#goldOverlay {
+#paidEarlyOverlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: linear-gradient(135deg, #0a0612 0%, #1a0a2e 100%);
     z-index: 9999999;
     display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-    overflow: hidden;
+    flex-direction: column; gap: 18px;
 }
-/* 심볼: 천천히 회전 + 부드러운 맥동 + 빛 번짐(글로우 펄스) */
-.saju-symbol {
+#paidEarlyOverlay .saju-symbol {
     font-size: 4rem; color: #FFD970;
-    animation: goldSpin 6s linear infinite, goldPulse 2.2s ease-in-out infinite;
-    filter: drop-shadow(0 0 14px rgba(255,217,112,0.55));
+    animation: paidSpin 2.5s linear infinite;
+    filter: drop-shadow(0 0 18px rgba(255,217,112,0.6));
 }
-@keyframes goldSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes goldPulse {
-    0%,100% { transform: scale(1);    filter: drop-shadow(0 0 12px rgba(255,217,112,0.45)); }
-    50%     { transform: scale(1.12); filter: drop-shadow(0 0 26px rgba(255,217,112,0.85)); }
+#paidEarlyOverlay .title {
+    color: #FFD970; font-size: 1.2rem; font-weight: 900;
+    letter-spacing: 0.04em; text-align: center; padding: 0 20px;
 }
-/* 심볼 뒤 은은한 빛 후광 (에메랄드그린 살짝 섞어 2색 원칙) */
-.halo {
-    position: absolute; width: 180px; height: 180px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,217,112,0.18) 0%, rgba(45,212,160,0.06) 45%, transparent 70%);
-    animation: haloBreath 2.2s ease-in-out infinite;
-    pointer-events: none;
+#paidEarlyOverlay .subtitle {
+    color: rgba(255,255,255,0.6); font-size: 0.85rem;
+    text-align: center; line-height: 1.6; margin-top: 4px; padding: 0 20px;
 }
-@keyframes haloBreath { 0%,100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
-.title { color: #FFD970; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.04em; text-align: center; padding: 0 20px; z-index: 1; }
-.subtitle { color: rgba(255,255,255,0.6); font-size: 0.85rem; text-align: center; line-height: 1.6; margin-top: 2px; padding: 0 20px; z-index: 1; }
-/* 로딩 점 3개 물결 */
-.dots { display: flex; gap: 8px; margin-top: 6px; z-index: 1; }
-.dots span {
-    width: 9px; height: 9px; border-radius: 50%; background: #FFD970;
-    animation: dotWave 1.3s ease-in-out infinite;
-}
-.dots span:nth-child(2) { animation-delay: 0.18s; background: #2dd4a0; }
-.dots span:nth-child(3) { animation-delay: 0.36s; }
-@keyframes dotWave { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-9px); opacity: 1; } }
-.err { color: #f87171; font-size: 12px; margin-top: 16px; text-align: center; padding: 0 20px; display: none; z-index: 1; }
-.hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.6; padding: 10px 16px; background: rgba(212,175,55,0.12); border-radius: 6px; display: none; z-index: 1; }
-.btn { background: #d4af37; color: #0f1419; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; margin-top: 14px; display: none; z-index: 1; }
-@media (prefers-reduced-motion: reduce) {
-    .saju-symbol, .halo, .dots span { animation: none !important; }
-}
+@keyframes paidSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.err { color: #f87171; font-size: 12px; margin-top: 16px; text-align: center; padding: 0 20px; display: none; }
+.hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.6; padding: 10px 16px; background: rgba(212,175,55,0.12); border-radius: 6px; display: none; }
+.btn { background: #d4af37; color: #0f1419; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; margin-top: 14px; display: none; }
 </style>
 </head>
 <body>
 
-<div id="goldOverlay">
-<div class="halo"></div>
+<div id="paidEarlyOverlay">
 <div class="saju-symbol" id="sym">✦</div>
 <div class="title" id="ttl">신탁을 불러오는 중...</div>
 <div class="subtitle" id="msg">결제 완료 — 잠시만 기다려주세요<br>곧 신탁이 펼쳐집니다</div>
-<div class="dots" id="dots"><span></span><span></span><span></span></div>
 <div class="err" id="err"></div>
 <div class="hint" id="hint"></div>
 <button class="btn" id="homeBtn" onclick="goHome()">홈으로</button>
@@ -175,7 +153,7 @@ function detectPlanFromAmount(amount) {
         if (category === 'crypto')  v54Ctx = 'crypto';
         if (category === 'general') v54Ctx = 'general';
 
-        // ★ 황금 화면 — 사주/카드 분기 (index.html paidEarlyOverlay와 동일 디자인)
+        // 황금 화면 — index.html paidEarlyOverlay와 동일 디자인 (사주 ☯ / 카드 ✦)
         var _sym = isSajuCategory ? '☯' : '✦';
         var _title = isSajuCategory ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
         var _symEl = document.getElementById('sym');
@@ -205,8 +183,6 @@ function detectPlanFromAmount(amount) {
     } catch (e) {
         console.error('[V55 success] 예외:', e);
         var sp = document.getElementById('sym'); if (sp) sp.style.animation = 'none';
-        var ha = document.getElementById('dots'); if (ha) ha.style.display = 'none';
-        var hl = document.querySelector('.halo'); if (hl) hl.style.display = 'none';
         document.getElementById('ttl').textContent = '결제 검증 오류';
         document.getElementById('msg').style.display = 'none';
         document.getElementById('err').style.display = 'block';
