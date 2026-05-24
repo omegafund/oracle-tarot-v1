@@ -35,6 +35,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 1
 </head>
 <body>
 
+<script>
+(function(){
+  try {
+    var _p = new URLSearchParams(window.location.search);
+    var _rid = _p.get('rid') || _p.get('readingId') || '';
+    var _isSaju = _rid.substring(0,3) === 'sj_';
+    document.addEventListener('DOMContentLoaded', function(){
+      var s = document.getElementById('sym');
+      var t = document.getElementById('ttl');
+      if (s) s.textContent = _isSaju ? '☯' : '✦';
+      if (t) t.textContent = _isSaju ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
+    });
+  } catch(_) {}
+})();
+</script>
 <div id="paidEarlyOverlay">
 <div class="saju-symbol" id="sym">✦</div>
 <div class="title" id="ttl">신탁을 불러오는 중...</div>
