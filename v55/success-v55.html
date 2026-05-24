@@ -5,40 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>결제 완료 — V55</title>
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f1419; color: #d4d4d4; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 16px; }
-.box { background: #1a1f2e; border: 1px solid #2c3447; border-radius: 8px; padding: 30px; text-align: center; max-width: 420px; width: 100%; }
-h1 { color: #d4af37; font-size: 18px; margin-bottom: 8px; }
-.spinner { width: 36px; height: 36px; border: 3px solid #2c3447; border-top-color: #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin: 16px auto; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.msg { color: #8fa3c5; font-size: 13px; margin-top: 8px; }
-.err { color: #f87171; font-size: 12px; margin-top: 16px; }
-.hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.6; padding: 10px; background: #1f2638; border-radius: 4px; }
-.btn { background: #d4af37; color: #0f1419; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; margin: 4px; }
+html, body { background: #0a0612 !important; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; }
+#goldOverlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(135deg, #0a0612 0%, #1a0a2e 100%);
+    z-index: 9999999;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    overflow: hidden;
+}
+/* 심볼: 천천히 회전 + 부드러운 맥동 + 빛 번짐(글로우 펄스) */
+.saju-symbol {
+    font-size: 4rem; color: #FFD970;
+    animation: goldSpin 6s linear infinite, goldPulse 2.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 14px rgba(255,217,112,0.55));
+}
+@keyframes goldSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes goldPulse {
+    0%,100% { transform: scale(1);    filter: drop-shadow(0 0 12px rgba(255,217,112,0.45)); }
+    50%     { transform: scale(1.12); filter: drop-shadow(0 0 26px rgba(255,217,112,0.85)); }
+}
+/* 심볼 뒤 은은한 빛 후광 (에메랄드그린 살짝 섞어 2색 원칙) */
+.halo {
+    position: absolute; width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,217,112,0.18) 0%, rgba(45,212,160,0.06) 45%, transparent 70%);
+    animation: haloBreath 2.2s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes haloBreath { 0%,100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+.title { color: #FFD970; font-size: 1.2rem; font-weight: 900; letter-spacing: 0.04em; text-align: center; padding: 0 20px; z-index: 1; }
+.subtitle { color: rgba(255,255,255,0.6); font-size: 0.85rem; text-align: center; line-height: 1.6; margin-top: 2px; padding: 0 20px; z-index: 1; }
+/* 로딩 점 3개 물결 */
+.dots { display: flex; gap: 8px; margin-top: 6px; z-index: 1; }
+.dots span {
+    width: 9px; height: 9px; border-radius: 50%; background: #FFD970;
+    animation: dotWave 1.3s ease-in-out infinite;
+}
+.dots span:nth-child(2) { animation-delay: 0.18s; background: #2dd4a0; }
+.dots span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes dotWave { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-9px); opacity: 1; } }
+.err { color: #f87171; font-size: 12px; margin-top: 16px; text-align: center; padding: 0 20px; display: none; z-index: 1; }
+.hint { color: #d4af37; font-size: 12px; margin-top: 12px; line-height: 1.6; padding: 10px 16px; background: rgba(212,175,55,0.12); border-radius: 6px; display: none; z-index: 1; }
+.btn { background: #d4af37; color: #0f1419; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; margin-top: 14px; display: none; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+    .saju-symbol, .halo, .dots span { animation: none !important; }
+}
 </style>
 </head>
 <body>
 
-<div class="box">
-<h1 id="ttl">신탁을 불러오는 중...</h1>
-<div class="spinner" id="spinner"></div>
-<div class="msg" id="msg">결제 완료 — 곧 신탁이 펼쳐집니다</div>
+<div id="goldOverlay">
+<div class="halo"></div>
+<div class="saju-symbol" id="sym">✦</div>
+<div class="title" id="ttl">신탁을 불러오는 중...</div>
+<div class="subtitle" id="msg">결제 완료 — 잠시만 기다려주세요<br>곧 신탁이 펼쳐집니다</div>
+<div class="dots" id="dots"><span></span><span></span><span></span></div>
 <div class="err" id="err"></div>
-<div class="hint" id="hint" style="display:none"></div>
-<div id="btns" style="display:none">
-<button class="btn" onclick="goHome()">홈으로</button>
-</div>
+<div class="hint" id="hint"></div>
+<button class="btn" id="homeBtn" onclick="goHome()">홈으로</button>
 </div>
 
 <script>
 var WORKER_URL = 'https://tarot-api-merged.omegafund01.workers.dev';
 var ZEUSTAROT_HOME = 'https://zeustarot.com';
 
-// ============================================================================
-// V55_TO_V54_PLAN -- ** 사주 전용 ** tier 매핑
-//   사주(saju)만 saju_basic/saju_premium 변환 (990/4900 구분)
-//   ** 카드(love/stock/crypto/general)는 이 매핑 사용 안 함 **
-//   이유: V54가 plan=saju_* 보면 "사주 결제"로 오판 -> 카드 pendingOracle 삭제 -> 홈복귀
-// ============================================================================
 var V55_TO_V54_PLAN = {
         'entry':         'saju_basic',
         'premium':       'saju_premium',
@@ -46,8 +77,6 @@ var V55_TO_V54_PLAN = {
         'saju_premium':  'saju_premium'
     };
 
-// readingId prefix -> 카테고리 정확 추출
-//   sj_ -> 사주 / lv_ -> 연애 / st_ -> 주식 / cr_ -> 코인 / gn_ -> 일반
 function detectCategoryFromReadingId(readingId) {
     if (!readingId) return null;
     var prefix = readingId.substring(0, 3);
@@ -59,8 +88,6 @@ function detectCategoryFromReadingId(readingId) {
     return null;
 }
 
-// amount -> plan 정확 매핑
-//   990원 -> entry / 4,900원 -> premium
 function detectPlanFromAmount(amount) {
     var amt = Number(amount);
     if (amt === 990)  return 'entry';
@@ -83,7 +110,6 @@ function detectPlanFromAmount(amount) {
         readingId         = p.get('rid') || p.get('readingId');
         signedAccessToken = p.get('token');
 
-        // plan 매개 우선순위: 1.URL plan  2.amount->plan  3.fetch-reading(아래)
         v55plan = p.get('plan') || detectPlanFromAmount(amount);
 
         if (!paymentKey || !orderId || !amount) {
@@ -92,8 +118,6 @@ function detectPlanFromAmount(amount) {
         if (!readingId || !signedAccessToken) {
             throw new Error('readingId 또는 token URL 누락');
         }
-
-        document.getElementById('msg').textContent = '결제 완료 — 곧 신탁이 펼쳐집니다';
 
         var confirmed = await Promise.race([
             fetch(WORKER_URL + '/v55/confirm-payment', {
@@ -116,12 +140,6 @@ function detectPlanFromAmount(amount) {
             throw new Error(confirmed.message || confirmed.error || '결제 검증 실패');
         }
 
-        document.getElementById('msg').textContent = '신탁을 불러오는 중...';
-
-        // category 추출 우선순위:
-        //   1. readingId prefix (** 결정적 -- V55 워커가 prefix 보유)
-        //   2. fetch-reading 응답 category
-        //   3. default 'saju'
         var category = detectCategoryFromReadingId(readingId);
 
         try {
@@ -138,61 +156,38 @@ function detectPlanFromAmount(amount) {
             console.warn('[V55 success] fetch-reading 결함 (무시):', fetchErr.message);
         }
 
-        // 최종 폴백
-        if (!v55plan)   v55plan = 'entry';    // 990 BASIC 안전 폴백
-        if (!category)  category = 'saju';    // 안전 폴백
+        if (!v55plan)   v55plan = 'entry';
+        if (!category)  category = 'saju';
 
-        // ====================================================================
-        // *** [핵심 수정] 사주 vs 카드 plan 분기 ***
-        //   사장님 진단 (두 과업 공통 뿌리):
-        //     기존: 카드도 V55_TO_V54_PLAN으로 plan=saju_premium 변환
-        //          -> V54가 plan=saju_* 보고 "사주 결제" 오판
-        //          -> ctx=love 무시 + pendingOracle(카드 데이터) 삭제
-        //          -> 사주 분기 진입 -> sajuPendingResult 없음 -> ** 홈 복귀 **
-        //
-        //   해결:
-        //     사주(saju)  -> plan = saju_basic/saju_premium (990/4900 구분)
-        //     카드(love/stock/crypto/general) -> plan을 ** saju_로 변환 안 함 **
-        //          -> V54가 non-saju로 인식 (Line 6935: saju_ 아니면 return false)
-        //          -> ctx=love 분기 + pendingOracle 복원 (Line 7609) -> 카드 점사창 정상
-        // ====================================================================
         var isSajuCategory = (category === 'saju');
 
         var v54Plan;
         if (isSajuCategory) {
-            // 사주: 990/4900 tier 구분 (saju_basic / saju_premium)
             v54Plan = V55_TO_V54_PLAN[v55plan] || 'saju_basic';
         } else {
-            // 카드: plan을 category_tier 형식으로 (saju_ 접두 회피)
-            //   V54는 plan이 saju_로 시작 안 하면 non-saju 처리 -> pendingOracle 복원
-            //   tier(990/4900)는 카드 점사창이 pendingOracle.cachedFullText로 이미 보유
             var cardTier = (v55plan === 'premium') ? 'premium' : 'basic';
-            v54Plan = category + '_' + cardTier;   // 예: love_premium, stock_basic
+            v54Plan = category + '_' + cardTier;
         }
 
-        // category -> V54 ctx 매핑
         var v54Ctx = 'saju';
         if (category === 'love')    v54Ctx = 'love';
         if (category === 'stock')   v54Ctx = 'stock';
         if (category === 'crypto')  v54Ctx = 'crypto';
         if (category === 'general') v54Ctx = 'general';
 
+        // ★ 황금 화면 — 사주/카드 분기 (index.html paidEarlyOverlay와 동일 디자인)
+        var _sym = isSajuCategory ? '☯' : '✦';
+        var _title = isSajuCategory ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
+        var _symEl = document.getElementById('sym');
+        var _ttlEl = document.getElementById('ttl');
+        if (_symEl) _symEl.textContent = _sym;
+        if (_ttlEl) _ttlEl.textContent = _title;
+
         console.log('[V55 success] 최종 분기:', {
-            amount: amount,
-            v55plan: v55plan,
-            category: category,
-            isSajuCategory: isSajuCategory,
-            v54Plan: v54Plan,
-            v54Ctx: v54Ctx,
-            readingId: readingId
+            amount: amount, v55plan: v55plan, category: category,
+            isSajuCategory: isSajuCategory, v54Plan: v54Plan, v54Ctx: v54Ctx, readingId: readingId
         });
 
-        var _loadingTitle = isSajuCategory ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
-        var _ttlEl = document.getElementById('ttl');
-        if (_ttlEl) _ttlEl.textContent = _loadingTitle;
-        document.getElementById('msg').textContent = _loadingTitle;
-
-        // V54 영업 URL -- rid + token + plan + ctx 정확 매개
         var v54Url = ZEUSTAROT_HOME + '/' +
                      '?paid=ok' +
                      '&ctx=' + encodeURIComponent(v54Ctx) +
@@ -209,12 +204,16 @@ function detectPlanFromAmount(amount) {
 
     } catch (e) {
         console.error('[V55 success] 예외:', e);
-        document.getElementById('spinner').style.display = 'none';
-        document.getElementById('msg').textContent = '결제 검증 오류';
+        var sp = document.getElementById('sym'); if (sp) sp.style.animation = 'none';
+        var ha = document.getElementById('dots'); if (ha) ha.style.display = 'none';
+        var hl = document.querySelector('.halo'); if (hl) hl.style.display = 'none';
+        document.getElementById('ttl').textContent = '결제 검증 오류';
+        document.getElementById('msg').style.display = 'none';
+        document.getElementById('err').style.display = 'block';
         document.getElementById('err').textContent = e.message;
         document.getElementById('hint').style.display = 'block';
         document.getElementById('hint').innerHTML = '잠시 후 홈으로 자동 이동';
-        document.getElementById('btns').style.display = 'block';
+        document.getElementById('homeBtn').style.display = 'inline-block';
         setTimeout(function () { goHome(); }, 5000);
     }
 })();
