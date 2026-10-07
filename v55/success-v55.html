@@ -53,7 +53,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 1
 <div id="paidEarlyOverlay">
 <div class="saju-symbol" id="sym">✦</div>
 <div class="title" id="ttl">신탁을 불러오는 중...</div>
-<div class="subtitle" id="msg">결제 완료 — 잠시만 기다려주세요<br>곧 신탁이 펼쳐집니다</div>
+<div class="subtitle" id="msg"><span id="v1Step">결제를 최종 확인하는 중…</span><br><span style="font-size:0.74rem;opacity:0.75;">화면을 닫지 마세요</span></div>
 <div class="err" id="err"></div>
 <div class="hint" id="hint"></div>
 <button class="btn" id="homeBtn" onclick="goHome()">홈으로</button>
@@ -135,7 +135,11 @@ function detectPlanFromAmount(amount) {
 
         var category = detectCategoryFromReadingId(readingId);
 
-        try {
+        // [v1.0.2] 결제 확인 완료 표시
+        try { var _st = document.getElementById('v1Step'); if (_st) _st.innerHTML = '<span style="color:#5DD68A;">결제 확인 완료 ✓</span> 신탁을 준비합니다…'; } catch(_) {}
+
+        // [v1.0.2] 번호 앞글자(sj_ 등)·금액으로 이미 알 수 있으면 추가 조회 생략 (왕복 1회 단축)
+        if (!category || !v55plan) try {
             var readingRes = await fetch(
                 WORKER_URL + '/v55/fetch-reading?rid=' + encodeURIComponent(readingId) +
                 '&token=' + encodeURIComponent(signedAccessToken)
@@ -193,7 +197,7 @@ function detectPlanFromAmount(amount) {
 
         setTimeout(function () {
             window.location.replace(v54Url);
-        }, 800);
+        }, 200);  // [v1.0.2] 800ms → 200ms
 
     } catch (e) {
         console.error('[V55 success] 예외:', e);
