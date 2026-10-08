@@ -13,9 +13,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 1
     z-index: 9999999;
     display: flex; align-items: center; justify-content: center;
     flex-direction: column; gap: 18px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;  /* [v1.0.7] 메인 대기화면과 동일 글꼴 */
 }
 #paidEarlyOverlay .saju-symbol {
-    font-size: 4rem; color: #FFD970;
+    font-size: 4rem; line-height: 1; color: #FFD970;  /* [v1.0.7] */
     animation: paidSpin 2.5s linear infinite;
     filter: drop-shadow(0 0 18px rgba(255,217,112,0.6));
 }
@@ -45,7 +46,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 1
       var s = document.getElementById('sym');
       var t = document.getElementById('ttl');
       if (s) s.textContent = _isSaju ? '☯' : '✦';
-      if (t) t.textContent = _isSaju ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
+      if (t) t.textContent = _isSaju ? 'PRO 사주 신탁 불러오는 중' : '프리미엄 신탁 불러오는 중';
     });
   } catch(_) {}
 })();
@@ -54,6 +55,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 1
 <div class="saju-symbol" id="sym">✦</div>
 <div class="title" id="ttl">신탁을 불러오는 중...</div>
 <div class="subtitle" id="msg"><span id="v1Step">결제를 최종 확인하는 중…</span><br><span style="font-size:0.74rem;opacity:0.75;">화면을 닫지 마세요</span></div>
+<script>
+/* [v1.0.7] 아이콘·제목을 즉시 확정(✦→☯ 바뀜 제거) + 회전 위상을 시계 기준으로 맞춰 메인 화면과 이어지게 */
+(function(){try{
+  var _p=new URLSearchParams(location.search); var _rid=_p.get('rid')||_p.get('readingId')||''; var _isSaju=_rid.substring(0,3)==='sj_';
+  var s=document.getElementById('sym'), t=document.getElementById('ttl');
+  if(s){ s.textContent=_isSaju?'☯':'✦'; s.style.animationDelay='-'+(Date.now()%2500)+'ms'; }
+  if(t){ t.textContent=_isSaju?'PRO 사주 신탁 불러오는 중':'프리미엄 신탁 불러오는 중'; }
+}catch(_){}})();
+</script>
 <div class="err" id="err"></div>
 <div class="hint" id="hint"></div>
 <button class="btn" id="homeBtn" onclick="goHome()">홈으로</button>
@@ -136,7 +146,13 @@ function detectPlanFromAmount(amount) {
         var category = detectCategoryFromReadingId(readingId);
 
         // [v1.0.2] 결제 확인 완료 표시
-        try { var _st = document.getElementById('v1Step'); if (_st) _st.innerHTML = '<span style="color:#5DD68A;">결제 확인 완료 ✓</span> 신탁을 준비합니다…'; } catch(_) {}
+        // [v1.0.7] 메인 대기화면 첫 장면과 글자까지 동일하게 → 페이지가 바뀌어도 같은 화면이 이어지는 것처럼 보임
+        try {
+            var _msg = document.getElementById('msg');
+            if (_msg) _msg.innerHTML = '<span style="color:#5DD68A;">결제 확인 완료 ✓</span><br><span>'
+                + ((readingId || '').substring(0,3) === 'sj_' ? '사주 명식을 계산하는 중…' : '카드의 흐름을 읽는 중…')
+                + '</span><br><span style="font-size:0.74rem;opacity:0.75;">보통 10~30초 걸립니다 · 화면을 닫지 마세요</span>';
+        } catch(_) {}
 
         // [v1.0.2] 번호 앞글자(sj_ 등)·금액으로 이미 알 수 있으면 추가 조회 생략 (왕복 1회 단축)
         if (!category || !v55plan) try {
@@ -174,7 +190,7 @@ function detectPlanFromAmount(amount) {
 
         // 황금 화면 — index.html paidEarlyOverlay와 동일 디자인 (사주 ☯ / 카드 ✦)
         var _sym = isSajuCategory ? '☯' : '✦';
-        var _title = isSajuCategory ? 'PRO 사주 신탁을 불러오는 중...' : '프리미엄 신탁을 불러오는 중...';
+        var _title = isSajuCategory ? 'PRO 사주 신탁 불러오는 중' : '프리미엄 신탁 불러오는 중';
         var _symEl = document.getElementById('sym');
         var _ttlEl = document.getElementById('ttl');
         if (_symEl) _symEl.textContent = _sym;
