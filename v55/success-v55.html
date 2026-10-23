@@ -194,6 +194,7 @@ function detectPlanFromAmount(amount) {
         var _symEl = document.getElementById('sym');
         var _ttlEl = document.getElementById('ttl');
         if (_symEl) _symEl.textContent = _sym;
+        if (p.get('ny') === '1') _title = '2027 신년사주 보고서 준비 중';   // [v1.2.0]
         if (_ttlEl) _ttlEl.textContent = _title;
 
         console.log('[V55 success] 최종 분기:', {
@@ -207,7 +208,8 @@ function detectPlanFromAmount(amount) {
                      '&plan=' + encodeURIComponent(v54Plan) +
                      '&rid=' + encodeURIComponent(readingId) +
                      '&token=' + encodeURIComponent(signedAccessToken) +
-                     '&method=' + encodeURIComponent('토스페이');
+                     '&method=' + encodeURIComponent('토스페이') +
+                     (p.get('ny') === '1' ? '&ny=1' : '');   // [v1.2.0] 신년사주 표시 그대로 전달
 
         console.log('[V55 success] V54 영업 URL redirect:', v54Url);
 
